@@ -4,7 +4,7 @@ const MetaTitle = ({ title }) => {
 
     return (
         <Helmet>
-            <title>{title} | Kumbha.ai</title>
+            <title>{title} | माझी पैठणी</title>
         </Helmet>
     );
 };

@@ -1,0 +1,126 @@
+.landing{
+  font-family:Poppins;
+  background:#fffaf3;
+}
+
+.language{
+  position:absolute;
+  right:30px;
+  top:20px;
+}
+
+.language button{
+  margin-left:10px;
+  padding:6px 12px;
+  border:none;
+  background:#8B0000;
+  color:white;
+  border-radius:6px;
+}
+
+.hero{
+  height:90vh;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  text-align:center;
+  background:linear-gradient(135deg,#fff1e0,#ffe4c4);
+}
+
+.title{
+  font-size:70px;
+  color:#8B0000;
+  animation:fade 2s ease;
+}
+
+.tabs{
+  margin-top:20px;
+}
+
+.tabs button{
+  margin:10px;
+  padding:10px 25px;
+  border:none;
+  background:#b22222;
+  color:white;
+  border-radius:25px;
+  cursor:pointer;
+}
+
+.tabs button:hover{
+  background:#8B0000;
+}
+
+.tagline{
+  margin-top:20px;
+  font-size:28px;
+  color:#5c2a1a;
+}
+
+.desc{
+  width:600px;
+  margin-top:10px;
+}
+
+.buttons{
+  margin-top:30px;
+}
+
+.seller{
+  background:#d4af37;
+  border:none;
+  padding:12px 25px;
+  margin-right:10px;
+  border-radius:25px;
+}
+
+.explore{
+  background:#8B0000;
+  color:white;
+  border:none;
+  padding:12px 25px;
+  border-radius:25px;
+}
+
+.scroll{
+  margin-top:40px;
+  animation:scroll 2s infinite;
+}
+
+.problem{
+  padding:80px;
+  text-align:center;
+}
+
+.cards{
+  display:flex;
+  justify-content:center;
+  gap:30px;
+  margin-top:40px;
+}
+
+.card{
+  width:300px;
+  padding:30px;
+  background:#fff4e6;
+  border-radius:15px;
+  box-shadow:0 5px 10px rgba(0,0,0,0.1);
+}
+
+.solution{
+  padding:80px;
+  text-align:center;
+  background:#fff0db;
+}
+
+@keyframes fade{
+  from{opacity:0;}
+  to{opacity:1;}
+}
+
+@keyframes scroll{
+  0%{transform:translateY(0)}
+  50%{transform:translateY(10px)}
+  100%{transform:translateY(0)}
+}
