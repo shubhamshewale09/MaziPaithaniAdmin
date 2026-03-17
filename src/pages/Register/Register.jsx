@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { AuthRegister } from "../../services/auth/Register";
 import { showApiError } from "../../Utils/Utils";
 import MetaTitle from "../../components/custom/MetaTitle";
+import { toast } from "react-toastify"; 
 
 const Register = () => {
   const navigate = useNavigate();
@@ -58,15 +59,23 @@ const Register = () => {
     try {
       setLoading(true);
 
-      const payload = {
-        ...form,
-        roleId: 1, // default user role
-      };
-
+      const payload = { ...form, roleId: 1 };
       const res = await AuthRegister(payload);
 
-      if (res?.statusCode === 200) {
-        navigate("/login");
+      if (res && (res.statusCode === 200 || res.status === 200)) {
+        // ✅ Reset form immediately
+        setForm({
+          sFirstName: "",
+          sLastName: "",
+          sEmail: "",
+          sPhoneNumber: "",
+          sPassword: "",
+        });
+
+        // ✅ Show toast and redirect
+        toast.success("Registration successful 🎉");
+
+        navigate("/login"); // redirect to login
       } else {
         showApiError(res);
       }
@@ -94,7 +103,6 @@ const Register = () => {
           </p>
 
           <form className="grid md:grid-cols-2 gap-6 mt-10" onSubmit={handleSubmit}>
-
             {/* First Name */}
             <div className="relative">
               <input
@@ -157,7 +165,6 @@ const Register = () => {
                 placeholder="Password"
                 className="w-full p-3 border rounded-xl focus:ring-2 focus:ring-red-300"
               />
-
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
@@ -165,7 +172,6 @@ const Register = () => {
               >
                 {showPassword ? <FaEyeSlash /> : <FaEye />}
               </button>
-
               {errors.sPassword && <p className="text-red-500 text-xs">{errors.sPassword}</p>}
             </div>
 
@@ -173,7 +179,7 @@ const Register = () => {
             <div className="md:col-span-2 mt-4">
               <button
                 type="submit"
-                 className="w-full py-3 bg-[#7a1e2c] text-white font-semibold rounded-xl text-sm
+                className="w-full py-3 bg-[#7a1e2c] text-white font-semibold rounded-xl text-sm
                     shadow-lg shadow-[#7a1e2c]/30
                     hover:bg-[#651623]
                     hover:scale-[1.02]
@@ -183,7 +189,6 @@ const Register = () => {
                 {loading ? "Registering..." : "Register"}
               </button>
             </div>
-
           </form>
 
           <p className="text-center text-sm mt-6">

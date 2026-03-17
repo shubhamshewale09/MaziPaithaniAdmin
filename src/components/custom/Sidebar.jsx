@@ -275,25 +275,7 @@ const Sidebar = ({ isOpen, setSelectedMenu }) => {
     };
 
 
-    // =================== AUTO OPEN ON REFRESH ===================
-    // useEffect(() => {
-    //     menus.forEach(menu => {
-    //         if (menu.children) {
-    //             menu.children.forEach(sub => {
-    //                 const activeRoute = getActiveSubRoute(sub);
-    //                 if (activeRoute) {
-    //                     setOpenMenu(menu.name);
-    //                     setSelectedMenu(activeRoute.name); // 🔥 EXACT NAME
-    //                 }
-    //             });
-    //         } else if (
-    //             location.pathname === menu.path ||
-    //             location.pathname.startsWith(menu.path + "/")
-    //         ) {
-    //             setSelectedMenu(menu.name);
-    //         }
-    //     });
-    // }, [location.pathname]);
+  
     useEffect(() => {
         menus.forEach(menu => {
 

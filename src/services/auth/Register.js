@@ -6,5 +6,6 @@ export const AuthRegister = async (params) => {
     `${Base_Url}api/auth/register`,
     params
   );
-  return res;
+
+  return res?.responseData || res;
 };

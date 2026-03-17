@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/auth/AuthContext";
 import { AuthLogin } from "../../services/auth/Login";
 import { showApiError } from "../../Utils/Utils";
+import { toast } from "react-toastify"; 
 import MetaTitle from "../../components/custom/MetaTitle";
 
 const PAITHANI_VIDEO_URL =
@@ -37,58 +38,62 @@ const Login = () => {
 
   // Submit
   const handleSubmit = async (e) => {
-  e.preventDefault();
+    e.preventDefault();
 
-  let hasError = false;
-  const newErrors = { loginId: "", password: "" };
+    let hasError = false;
+    const newErrors = { loginId: "", password: "" };
 
-  const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.loginId);
+    const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.loginId);
 
-  if (!form.loginId) {
-    newErrors.loginId = "Email is required";
-    hasError = true;
-  } else if (!isEmail) {
-    newErrors.loginId = "Enter valid email";
-    hasError = true;
-  }
-
-  if (!form.password) {
-    newErrors.password = "Password is required";
-    hasError = true;
-  }
-
-  setErrors(newErrors);
-  if (hasError) return;
-
-  try {
-    setLoading(true);
-
-    const payload = {
-      email: form.loginId,
-      password: form.password,
-    };
-
-    const res = await AuthLogin(payload);
-
-    if (res?.statusCode === 200) {
-      const userData = res.responseData;
-
-      localStorage.setItem("login", JSON.stringify(userData));
-
-      login(userData);
-      navigate("/");
-    } else {
-      showApiError(res);
+    if (!form.loginId) {
+      newErrors.loginId = "Email is required";
+      hasError = true;
+    } else if (!isEmail) {
+      newErrors.loginId = "Enter valid email";
+      hasError = true;
     }
-  } catch (error) {
-    console.log("error==>>", error);
-    showApiError(
-      error.response?.data || { message: "Something went wrong" }
-    );
-  } finally {
-    setLoading(false);
-  }
-};
+
+    if (!form.password) {
+      newErrors.password = "Password is required";
+      hasError = true;
+    }
+
+    setErrors(newErrors);
+    if (hasError) return;
+
+    try {
+      setLoading(true);
+
+      const payload = {
+        email: form.loginId,
+        password: form.password,
+      };
+
+      const res = await AuthLogin(payload);
+
+      console.log("LOGIN RESPONSE:", res); 
+
+      if (res && res.token) {
+        localStorage.setItem("login", JSON.stringify(res));
+
+        login(res);
+
+        toast.success("Login successful 🎉"); 
+
+        navigate("/dashboard");
+      } else {
+        showApiError(res);
+      }
+    } catch (error) {
+      console.log("error==>>", error);
+      showApiError(
+        error.response?.data || { message: "Something went wrong" }
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const isEmailInput = form.loginId.includes("@");
 
   return (
@@ -100,8 +105,8 @@ const Login = () => {
 
           {/* LEFT SIDE */}
           <div className="w-full md:basis-[45%] p-6 sm:p-10 md:p-14 flex flex-col bg-white">
-
             <div className="flex-1 flex flex-col justify-center">
+
               <h1 className="text-3xl sm:text-4xl font-extrabold text-[#7a1e2c]">
                 माझी पैठणी
               </h1>
@@ -117,10 +122,10 @@ const Login = () => {
 
               <form className="space-y-5 mt-8" onSubmit={handleSubmit}>
 
-                {/* EMAIL OR MOBILE */}
+                {/* EMAIL */}
                 <div className="relative border rounded-xl border-gray-200 focus-within:border-[#7a1e2c]">
                   <label className="absolute top-2 left-4 text-[10px] text-[#7a1e2c] font-bold uppercase">
-                    Email or Mobile Number
+                    Email
                   </label>
 
                   <input
@@ -172,7 +177,6 @@ const Login = () => {
                     type="button"
                     onClick={() => setShowPassword((p) => !p)}
                     className="absolute right-4 top-1/2 -translate-y-1/2"
-                    tabIndex={-1}
                   >
                     {showPassword ? (
                       <FaEyeSlash fill="#7a1e2c" />
@@ -192,6 +196,7 @@ const Login = () => {
                 <div className="pt-6">
                   <button
                     type="submit"
+                    disabled={loading}
                     className="w-full py-3 bg-[#7a1e2c] text-white font-semibold rounded-xl text-sm
                     shadow-lg shadow-[#7a1e2c]/30
                     hover:bg-[#651623]
@@ -207,18 +212,8 @@ const Login = () => {
             </div>
           </div>
 
-          {/* RIGHT SIDE VIDEO */}
+       
           <div className="w-full md:basis-[55%] relative overflow-hidden h-[260px] md:h-auto">
-
-            <div className="absolute top-0 left-[-1px] h-full w-16 z-20">
-              <svg viewBox="0 0 100 800" preserveAspectRatio="none">
-                <path
-                  d="M100,0 C40,150 120,350 20,500 C-20,600 80,750 0,800 L0,0 Z"
-                  fill="white"
-                />
-              </svg>
-            </div>
-
             <div className="absolute inset-0 bg-[#7a1e2c]/30 z-10"></div>
 
             <video
