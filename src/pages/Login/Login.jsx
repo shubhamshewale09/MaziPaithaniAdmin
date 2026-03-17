@@ -192,7 +192,6 @@ const Login = () => {
                   )}
                 </div>
 
-                {/* BUTTON */}
                 <div className="pt-6">
                   <button
                     type="submit"

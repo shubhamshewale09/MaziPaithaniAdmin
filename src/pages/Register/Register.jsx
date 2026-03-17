@@ -63,7 +63,6 @@ const Register = () => {
       const res = await AuthRegister(payload);
 
       if (res && (res.statusCode === 200 || res.status === 200)) {
-        // ✅ Reset form immediately
         setForm({
           sFirstName: "",
           sLastName: "",
@@ -72,7 +71,6 @@ const Register = () => {
           sPassword: "",
         });
 
-        // ✅ Show toast and redirect
         toast.success("Registration successful 🎉");
 
         navigate("/login"); // redirect to login

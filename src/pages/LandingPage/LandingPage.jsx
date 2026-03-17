@@ -58,7 +58,6 @@ function LandingPage() {
           middlemen
         </p>
 
-        {/* Buttons */}
         <div className="flex gap-4 mt-8 flex-wrap justify-center">
           <button className="px-6 py-3 bg-red-700 text-white rounded-lg shadow hover:scale-105 transition">
             Become a Seller
@@ -73,7 +72,6 @@ function LandingPage() {
           Scroll ↓
         </div>
 
-        {/* Problems Section */}
         <div className="mt-32">
           <p className="text-center text-yellow-600 font-semibold tracking-widest text-sm mb-2">
             THE CHALLENGE
@@ -140,7 +138,6 @@ function LandingPage() {
           </div>
         </div>
 
-        {/* Solution Section */}
         <div className="mt-32 px-6 pb-24">
           <p className="text-center text-yellow-600 font-semibold tracking-widest text-sm md:text-base mb-2">
             OUR SOLUTION
