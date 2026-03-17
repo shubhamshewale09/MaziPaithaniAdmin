@@ -6,8 +6,10 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/auth/AuthContext";
 import { AuthLogin } from "../../services/auth/Login";
 import { showApiError } from "../../Utils/Utils";
-import pathaniWaving from "../../assets/images/pathaniWaving.mp4";
+// import pathaniWaving from "../../assets/images/pathaniWaving.mp4";
 import MetaTitle from "../../components/custom/MetaTitle";
+
+const PAITHANI_VIDEO_URL = "https://res.cloudinary.com/deot3irfg/video/upload/v1773764259/pathaniWaving_xscbbj.mp4"
 
 const Login = () => {
   const { login } = useAuth();
@@ -66,8 +68,6 @@ const Login = () => {
       setLoading(false);
     }
   };
-  
-
 
   return (
     <>
@@ -165,12 +165,12 @@ const Login = () => {
                   <button
                     type="submit"
                     className="flex-1 py-3 px-6 bg-[#7a1e2c] text-white font-semibold rounded-xl text-sm 
-  shadow-lg shadow-[#7a1e2c]/30 
-  hover:bg-[#651623] 
-  hover:shadow-xl 
-  hover:scale-[1.02] 
-  active:scale-[0.98] 
-  transition-all duration-200"
+                              shadow-lg shadow-[#7a1e2c]/30 
+                              hover:bg-[#651623] 
+                              hover:shadow-xl 
+                              hover:scale-[1.02] 
+                              active:scale-[0.98] 
+                              transition-all duration-200"
                   >
                     {loading ? "Logging in..." : "Login"}
                   </button>
@@ -199,7 +199,7 @@ const Login = () => {
             <div className="absolute inset-0 bg-[#7a1e2c]/30 z-10"></div>
 
             <video
-              src={pathaniWaving}
+              src={PAITHANI_VIDEO_URL}
               autoPlay
               loop
               muted
