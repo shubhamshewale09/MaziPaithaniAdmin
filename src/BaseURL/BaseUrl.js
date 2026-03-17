@@ -1,1 +1,2 @@
-export const Base_Url = "https://api.kumbh.mkisan.comm/api/";
+// BaseUrl.js
+export const Base_Url = "https://majhipaithani-api.onrender.com/";

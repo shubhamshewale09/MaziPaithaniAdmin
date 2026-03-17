@@ -8,7 +8,7 @@ import Loader from "./components/custom/Loader";
 // Lazy Load Pages
 const LandingPage = lazy(() => import("./pages/LandingPage/LandingPage"));
 const Login = lazy(() => import("./pages/Login/Login"));
-// const Register = lazy(() => import("./pages/"));
+const Register = lazy(() => import("./pages/Register/Register")); 
 
 function App() {
   return (
@@ -25,7 +25,7 @@ function App() {
               <Route path="/login" element={<Login />} />
 
               {/* Register Page */}
-              {/* <Route path="/register" element={<Register />} /> */}
+              <Route path="/register" element={<Register />} /> 
 
             </Routes>
           </Suspense>

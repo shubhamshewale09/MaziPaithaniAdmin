@@ -1,9 +1,9 @@
 import { Base_Url } from "../../BaseURL/BaseUrl";
 import { postApiWithoutAuthorization } from "./ApiMethod";
 
-export const AuthLogin = async (params) => {
+export const AuthRegister = async (params) => {
   const res = await postApiWithoutAuthorization(
-    `${Base_Url}api/auth/login`,
+    `${Base_Url}api/auth/register`,
     params
   );
   return res;
