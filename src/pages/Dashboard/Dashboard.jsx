@@ -54,6 +54,10 @@ const Dashboard = () => {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
+  const loginData = JSON.parse(localStorage.getItem("login") || "null");
+  const shouldForceProfileCompletion =
+    loginData?.isSellerProfileComplete === false && activeTab === "profile";
+
   const data = {
     totalUsers: 120,
     totalSellers: 45,
@@ -135,6 +139,8 @@ const Dashboard = () => {
   };
 
   const toggleSidebar = () => {
+    if (shouldForceProfileCompletion) return;
+
     if (isMobile) {
       setIsMobileSidebarOpen((prev) => !prev);
       return;
@@ -272,27 +278,37 @@ const Dashboard = () => {
     <>
       <MetaTitle title="Dashboard" />
 
-      <div className="min-h-screen bg-[#f7f1ed]">
+      <div className="min-h-screen overflow-x-hidden bg-[#f7f1ed]">
         <Header
           onMenuClick={toggleSidebar}
           activeTab={activeTab}
-          isMobile={isMobile}
+          showMenuButton={!shouldForceProfileCompletion}
+          showLogoutButton={shouldForceProfileCompletion}
+          onLogout={handleLogout}
         />
 
-        <Sidebar
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
-          onLogout={handleLogout}
-          isCollapsed={isSidebarCollapsed}
-          isMobile={isMobile}
-          isOpen={isMobileSidebarOpen}
-          onClose={closeMobileSidebar}
-        />
+        {!shouldForceProfileCompletion && (
+          <Sidebar
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            onLogout={handleLogout}
+            isCollapsed={isSidebarCollapsed}
+            isMobile={isMobile}
+            isOpen={isMobileSidebarOpen}
+            onClose={closeMobileSidebar}
+          />
+        )}
 
         <main
           className={[
-            "relative min-h-screen px-4 pb-8 pt-[94px] transition-all duration-300 ease-out sm:px-6 lg:px-8",
-            isMobile ? "ml-0" : isSidebarCollapsed ? "lg:ml-[92px]" : "lg:ml-[280px]",
+            "relative min-h-screen overflow-x-hidden px-4 pb-8 pt-[94px] transition-all duration-300 ease-out sm:px-6 lg:px-8",
+            shouldForceProfileCompletion
+              ? "ml-0"
+              : isMobile
+                ? "ml-0"
+                : isSidebarCollapsed
+                  ? "lg:ml-[92px]"
+                  : "lg:ml-[280px]",
           ].join(" ")}
         >
           <div className="absolute inset-x-0 top-[74px] -z-10 h-[320px] bg-[radial-gradient(circle_at_top_right,_rgba(201,162,39,0.18),_transparent_34%),radial-gradient(circle_at_top_left,_rgba(122,30,44,0.12),_transparent_30%)]" />
