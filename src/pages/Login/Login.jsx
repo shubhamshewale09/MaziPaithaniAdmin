@@ -70,17 +70,29 @@ const Login = () => {
       };
 
       const res = await AuthLogin(payload);
-      console.log('login details', res);
-      console.log('LOGIN RESPONSE:', res);
 
       if (res && res.token) {
+        // Store token and user data
         localStorage.setItem('login', JSON.stringify(res));
+        localStorage.setItem('token', res.token);
 
+        // Store UserId and RoleId for API headers
+        if (res.userId) {
+          localStorage.setItem('UserId', res.userId.toString());
+        }
+        if (res.roleId) {
+          localStorage.setItem('RoleId', res.roleId.toString());
+        }
         login(res);
 
         toast.success('Login successful 🎉');
 
-        navigate('/dashboard');
+        // Check seller profile completion and redirect accordingly
+        if (res.isSellerProfileComplete === false) {
+          navigate('/dashboard?tab=profile');
+        } else {
+          navigate('/dashboard');
+        }
       } else {
         showApiError(res);
       }
