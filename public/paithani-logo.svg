@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Majhi Paithani logo">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#fff4dc" />
+      <stop offset="52%" stop-color="#f3cf74" />
+      <stop offset="100%" stop-color="#d7a12d" />
+    </linearGradient>
+    <linearGradient id="feather" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#7a1e2c" />
+      <stop offset="100%" stop-color="#b43a4d" />
+    </linearGradient>
+  </defs>
+  <circle cx="64" cy="64" r="60" fill="url(#bg)"/>
+  <circle cx="64" cy="64" r="58" fill="none" stroke="#7a1e2c" stroke-opacity="0.18" stroke-width="4"/>
+  <rect x="24" y="101" width="80" height="7" rx="3.5" fill="#7a1e2c" opacity="0.22"/>
+  <path d="M42 95c14-16 20-42 19-61 13 9 21 23 25 40 11-12 16-26 14-43 15 16 20 40 13 64-9 2-19 2-28 0l-8-16-10 16c-8 2-17 2-25 0Z" fill="#f5c95a" opacity="0.35"/>
+  <path d="M38 92c15-20 21-42 20-61 15 9 26 24 31 42 5 16 13 27 24 34-11 4-24 3-36-2L65 87l-12 18c-11 4-23 5-33 1 8-4 14-9 18-14Z" fill="url(#feather)"/>
+  <circle cx="67" cy="56" r="8" fill="#fff4dc"/>
+  <circle cx="67" cy="56" r="4" fill="#7a1e2c"/>
+  <path d="M28 19c9 6 21 10 36 10s27-4 36-10" fill="none" stroke="#7a1e2c" stroke-width="6" stroke-linecap="round" opacity="0.16"/>
+</svg>

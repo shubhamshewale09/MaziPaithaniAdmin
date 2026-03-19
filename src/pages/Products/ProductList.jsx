@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, Filter, Minus, Package, Pencil, Plus, Search, Sparkles, Trash2 } from "lucide-react";
 import ConfirmationModal from "../../components/custom/ConfirmationModal";
+import MetaTitle from "../../components/custom/MetaTitle";
 import { sellerProducts } from "../../data/sellerStaticData";
 import AddUpdateProduct from "./AddUpdateProduct";
 import {
@@ -95,6 +96,7 @@ const ProductList = () => {
 
   return (
     <>
+      <MetaTitle title="Products" />
       <SellerPageShell
         eyebrow="Seller Studio"
         title="Curate your Paithani collection with a cleaner catalogue view."

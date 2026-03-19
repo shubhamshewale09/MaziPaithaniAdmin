@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Bell, LockKeyhole, Save } from "lucide-react";
+import MetaTitle from "../../components/custom/MetaTitle";
 import {
   SellerButton,
   SellerPageShell,
@@ -17,7 +18,9 @@ const Settings = () => {
   });
 
   return (
-    <SellerPageShell
+    <>
+      <MetaTitle title="Settings" />
+      <SellerPageShell
       eyebrow="Account Preferences"
       title="Fine-tune seller alerts, communication choices, and account safety settings."
       description="This is a static settings design that already shares the same button, input, panel, and toggle system as the rest of the seller tabs."
@@ -65,7 +68,8 @@ const Settings = () => {
           </div>
         </SellerSectionCard>
       </section>
-    </SellerPageShell>
+      </SellerPageShell>
+    </>
   );
 };
 

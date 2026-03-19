@@ -9,6 +9,7 @@ import {
   SellerSectionCard,
   SellerStatCard,
 } from "../../components/seller/SellerUI";
+import MetaTitle from "../../components/custom/MetaTitle";
 import { sellerEnquiries } from "../../data/sellerStaticData";
 
 const Enquiries = () => {
@@ -29,7 +30,9 @@ const Enquiries = () => {
   };
 
   return (
-    <SellerPageShell
+    <>
+      <MetaTitle title="Enquiries" />
+      <SellerPageShell
       eyebrow="Buyer Conversations"
       title="Handle customization requests and buyer questions without losing response context."
       description="This page stays static for now, but the card hierarchy and message snippets are ready for live enquiry threads later."
@@ -79,7 +82,8 @@ const Enquiries = () => {
           </div>
         )}
       </SellerSectionCard>
-    </SellerPageShell>
+      </SellerPageShell>
+    </>
   );
 };
 

@@ -9,6 +9,7 @@ import {
   SellerSectionCard,
   SellerStatCard,
 } from "../../components/seller/SellerUI";
+import MetaTitle from "../../components/custom/MetaTitle";
 import { sellerOrders } from "../../data/sellerStaticData";
 
 const formatCurrency = (value) => `Rs ${value.toLocaleString("en-IN")}`;
@@ -32,7 +33,9 @@ const Orders = () => {
   };
 
   return (
-    <SellerPageShell
+    <>
+      <MetaTitle title="Orders" />
+      <SellerPageShell
       eyebrow="Order Desk"
       title="Track buyer orders, dispatch timing, and handover status in one place."
       description="This screen keeps the same maroon-gold language as your dashboard while following the denser tab layouts from the reference design."
@@ -99,7 +102,8 @@ const Orders = () => {
           </div>
         )}
       </SellerSectionCard>
-    </SellerPageShell>
+      </SellerPageShell>
+    </>
   );
 };
 

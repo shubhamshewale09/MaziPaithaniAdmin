@@ -1,5 +1,6 @@
 import React from "react";
 import { ArrowUpRight, IndianRupee, Landmark, TrendingUp, Wallet } from "lucide-react";
+import MetaTitle from "../../components/custom/MetaTitle";
 import { SellerBadge, SellerPageShell, SellerSectionCard, SellerStatCard } from "../../components/seller/SellerUI";
 import { sellerPayouts, sellerRevenueMonths } from "../../data/sellerStaticData";
 
@@ -7,7 +8,9 @@ const formatCurrency = (value) => `Rs ${value.toLocaleString("en-IN")}`;
 const maxRevenue = Math.max(...sellerRevenueMonths.map((item) => item.amount));
 
 const Revenue = () => (
-  <SellerPageShell
+  <>
+    <MetaTitle title="Revenue" />
+    <SellerPageShell
     eyebrow="Revenue Insights"
     title="See collection trends, payout readiness, and monthly growth at a glance."
     description="The charts are intentionally static for now, but the visual system is reusable and ready for backend integration later."
@@ -53,7 +56,8 @@ const Revenue = () => (
         </div>
       </SellerSectionCard>
     </section>
-  </SellerPageShell>
+    </SellerPageShell>
+  </>
 );
 
 export default Revenue;

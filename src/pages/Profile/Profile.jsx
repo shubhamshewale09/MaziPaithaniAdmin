@@ -8,6 +8,7 @@ import {
 } from '../../services/auth/Profile';
 import { showApiError } from '../../Utils/Utils';
 import { toast } from 'react-toastify';
+import MetaTitle from "../../components/custom/MetaTitle";
 
 const Profile = () => {
   const [activeTab, setActiveTab] = useState('shopInfo');
@@ -211,7 +212,9 @@ const Profile = () => {
   };
 
   return (
-    <div className='p-6 bg-gray-50 min-h-full'>
+    <>
+      <MetaTitle title="Profile" />
+      <div className='p-6 bg-gray-50 min-h-full'>
       {/* Page Header */}
       <div className='mb-8'>
         <h1 className='text-2xl font-bold text-gray-800 mb-1'>
@@ -533,7 +536,8 @@ const Profile = () => {
           </button>
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 };
 
