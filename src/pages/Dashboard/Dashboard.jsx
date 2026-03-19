@@ -128,7 +128,7 @@ const Dashboard = () => {
     {
       title: "Revenue",
       value: `Rs ${data.totalRevenue.toLocaleString()}`,
-      icon: <IndianRupee size={20} />,
+      icon: <IndianRupee size={20} className="dashboard-icon-rupee" />,
       accent: "from-[#5d1228] to-[#ca8a04]",
       note: "+18.4% vs last month",
     },
@@ -221,7 +221,7 @@ const Dashboard = () => {
               </p>
               <h2 className="mt-2 text-2xl font-bold text-[#3d1e17]">Latest updates</h2>
             </div>
-            <Clock3 size={18} className="text-[#a57b4f]" />
+            <Clock3 size={18} className="dashboard-animated-icon text-[#a57b4f]" />
           </div>
 
           <div className="mt-6 space-y-3">
@@ -231,7 +231,7 @@ const Dashboard = () => {
                 className="dashboard-fade-up flex items-start gap-4 rounded-2xl border border-[#f1e8e4] bg-[#fffaf7] px-4 py-4 transition hover:-translate-y-1 hover:shadow-lg"
                 style={{ animationDelay: `${index * 110}ms` }}
               >
-                <div className="mt-1 flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-[#f6d37e] to-[#7a1e2c] text-white shadow-md">
+                <div className="dashboard-icon-shell mt-1 flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-[#f6d37e] to-[#7a1e2c] text-white shadow-md">
                   <ChevronRight size={16} />
                 </div>
                 <div>
@@ -322,8 +322,8 @@ const StatCard = ({ title, value, icon, accent, note, delay }) => (
         <p className="text-sm font-medium text-[#8b6c60]">{title}</p>
         <p className="mt-3 text-2xl font-bold text-[#2f1d18] sm:text-[1.9rem]">{value}</p>
       </div>
-      <div className={`flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br ${accent} text-white shadow-lg`}>
-        {icon}
+      <div className={`dashboard-icon-shell flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br ${accent} text-white shadow-lg`}>
+        <span className="dashboard-icon-glyph">{icon}</span>
       </div>
     </div>
     <div className="mt-5 flex items-center justify-between">
@@ -338,8 +338,8 @@ const InfoCard = ({ title, desc, icon, delay }) => (
     className="dashboard-fade-up rounded-[24px] border border-[#f0e4de] bg-gradient-to-br from-[#fffdfa] via-[#fff8f4] to-[#fef0e4] p-5 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg"
     style={{ animationDelay: `${delay}ms` }}
   >
-    <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#7a1e2c] text-white shadow-md">
-      {icon}
+    <div className="dashboard-icon-shell flex h-11 w-11 items-center justify-center rounded-2xl bg-[#7a1e2c] text-white shadow-md">
+      <span className="dashboard-icon-glyph">{icon}</span>
     </div>
     <h3 className="mt-4 text-lg font-semibold text-[#5a1822]">{title}</h3>
     <p className="mt-2 text-sm leading-7 text-[#6d5b55]">{desc}</p>

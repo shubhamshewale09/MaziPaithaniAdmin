@@ -2,6 +2,10 @@ import React from "react";
 
 const cn = (...values) => values.filter(Boolean).join(" ");
 
+const SellerAnimatedIcon = ({ icon, className }) => (
+  <span className={cn("seller-animated-icon", className)}>{icon}</span>
+);
+
 export const SellerPageShell = ({ eyebrow, title, description, actions, children }) => (
   <div className="seller-page space-y-6 sm:space-y-7">
     <section className="seller-hero seller-rise px-5 py-6 sm:px-8 sm:py-8">
@@ -49,7 +53,7 @@ export const SellerStatCard = ({ icon, label, value, note, accent = "wine" }) =>
           <p className="mt-3 text-2xl font-bold text-[#2f1d18] sm:text-[1.9rem]">{value}</p>
         </div>
         <div className={cn("flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br shadow-lg", accentMap[accent] || accentMap.wine)}>
-          {icon}
+          <SellerAnimatedIcon icon={icon} className="seller-animated-icon-kpi" />
         </div>
       </div>
       {note ? <p className="mt-4 text-xs font-semibold uppercase tracking-[0.14em] text-[#a47c66]">{note}</p> : null}
@@ -74,7 +78,7 @@ export const SellerButton = ({ variant = "primary", className, children, ...prop
 
 export const SellerSearchField = ({ icon, className, ...props }) => (
   <div className={cn("relative", className)}>
-    {icon ? <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[#946e60]">{icon}</span> : null}
+    {icon ? <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[#946e60]"><SellerAnimatedIcon icon={icon} className="seller-animated-icon-search" /></span> : null}
     <input className={cn("seller-input", icon && "pl-12")} {...props} />
   </div>
 );
@@ -85,7 +89,9 @@ export const SellerBadge = ({ tone = "neutral", children }) => (
 
 export const SellerEmptyState = ({ icon, title, description }) => (
   <div className="seller-soft-panel seller-rise flex flex-col items-center justify-center px-6 py-12 text-center">
-    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#fff3e2] text-[#7a1e2c]">{icon}</div>
+    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#fff3e2] text-[#7a1e2c]">
+      <SellerAnimatedIcon icon={icon} className="seller-animated-icon-spotlight" />
+    </div>
     <h3 className="mt-4 text-lg font-bold text-[#3d1e17]">{title}</h3>
     <p className="mt-2 max-w-md text-sm leading-6 text-[#7c665d]">{description}</p>
   </div>

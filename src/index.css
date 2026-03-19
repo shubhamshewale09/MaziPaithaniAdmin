@@ -169,3 +169,47 @@ body {
 .react-calendar__navigation button:hover {
   background-color: #fde7b836;
 }
+.dashboard-icon-glyph {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+}
+
+.dashboard-icon-glyph > svg,
+.dashboard-animated-icon {
+  transform-origin: center;
+  animation: dashboardIconFloat 2.15s ease-in-out infinite;
+  transition: transform 220ms ease, filter 220ms ease;
+  will-change: transform;
+}
+
+.dashboard-fade-up:hover .dashboard-icon-glyph > svg,
+.dashboard-icon-shell:hover .dashboard-icon-glyph > svg,
+.dashboard-animated-icon:hover {
+  transform: translateY(-3px) scale(1.14) rotate(-6deg);
+  filter: drop-shadow(0 10px 14px rgba(122, 30, 44, 0.24));
+}
+
+.dashboard-icon-rupee {
+  transform: scale(0.94) translateX(1px);
+}
+
+@keyframes dashboardIconFloat {
+  0%,
+  100% {
+    transform: translateY(0) scale(1) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-4px) scale(1.12) rotate(-5deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dashboard-icon-glyph > svg,
+  .dashboard-animated-icon {
+    animation: none;
+    transition: none;
+  }
+}

@@ -255,6 +255,64 @@
   background: linear-gradient(180deg, rgba(201, 162, 39, 0.92), rgba(122, 30, 44, 0.88));
 }
 
+
+.seller-animated-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.seller-animated-icon > svg {
+  transform-origin: center;
+  animation: sellerIconFloat 2.25s ease-in-out infinite;
+  transition: transform 220ms ease, filter 220ms ease;
+  will-change: transform;
+}
+
+.seller-animated-icon-kpi > svg {
+  animation-duration: 2s;
+}
+
+.seller-animated-icon-search > svg {
+  animation-duration: 2.7s;
+  animation-name: sellerIconDrift;
+}
+
+.seller-animated-icon-spotlight > svg {
+  animation-duration: 1.9s;
+}
+
+.seller-kpi:hover .seller-animated-icon > svg,
+.seller-panel-hover:hover .seller-animated-icon > svg,
+.seller-soft-panel:hover .seller-animated-icon > svg,
+.seller-badge:hover .seller-animated-icon > svg {
+  transform: translateY(-3px) scale(1.14) rotate(-6deg);
+  filter: drop-shadow(0 10px 14px rgba(122, 30, 44, 0.24));
+}
+
+.seller-badge .seller-animated-icon > svg {
+  animation-duration: 2.3s;
+}
+
+@keyframes sellerIconFloat {
+  0%,
+  100% {
+    transform: translateY(0) scale(1) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-4px) scale(1.12) rotate(-5deg);
+  }
+}
+
+@keyframes sellerIconDrift {
+  0%,
+  100% {
+    transform: translateX(0) translateY(0);
+  }
+  50% {
+    transform: translateX(2px) translateY(-3px) scale(1.08);
+  }
+}
 .seller-divider {
   height: 1px;
   width: 100%;
@@ -273,6 +331,13 @@
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .seller-animated-icon > svg {
+    animation: none;
+    transition: none;
   }
 }
 
