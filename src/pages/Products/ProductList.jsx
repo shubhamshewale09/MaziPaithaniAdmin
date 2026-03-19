@@ -1,6 +1,8 @@
 import React, { useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, Filter, Minus, Package, Pencil, Plus, Search, Sparkles, Trash2 } from "lucide-react";
 import ConfirmationModal from "../../components/custom/ConfirmationModal";
+import { sellerProducts } from "../../data/sellerStaticData";
+import AddUpdateProduct from "./AddUpdateProduct";
 import {
   SellerBadge,
   SellerButton,
@@ -13,17 +15,14 @@ import {
 
 const formatCurrency = (value) => `Rs ${value.toLocaleString("en-IN")}`;
 
-const ProductList = ({
-  products,
-  query,
-  setQuery,
-  onAddProduct,
-  onEditProduct,
-  onDeleteProduct,
-  onUpdateStock,
-}) => {
+const ProductList = () => {
+  const [products, setProducts] = useState(sellerProducts);
+  const [query, setQuery] = useState("");
   const [activeImages, setActiveImages] = useState({});
   const [pendingDelete, setPendingDelete] = useState(null);
+  const [isProductModalOpen, setIsProductModalOpen] = useState(false);
+  const [productModalMode, setProductModalMode] = useState("add");
+  const [selectedProduct, setSelectedProduct] = useState(null);
 
   const filteredProducts = useMemo(
     () =>
@@ -46,9 +45,51 @@ const ProductList = ({
     });
   };
 
+  const openAddProductModal = () => {
+    setProductModalMode("add");
+    setSelectedProduct(null);
+    setIsProductModalOpen(true);
+  };
+
+  const openEditProductModal = (product) => {
+    setProductModalMode("edit");
+    setSelectedProduct(product);
+    setIsProductModalOpen(true);
+  };
+
+  const closeProductModal = () => {
+    setIsProductModalOpen(false);
+    setSelectedProduct(null);
+    setProductModalMode("add");
+  };
+
+  const handleSaveProduct = (nextProduct) => {
+    setProducts((current) => {
+      const exists = current.some((product) => product.id === nextProduct.id);
+      return exists
+        ? current.map((product) => (product.id === nextProduct.id ? nextProduct : product))
+        : [nextProduct, ...current];
+    });
+    closeProductModal();
+  };
+
+  const handleDeleteProduct = (productId) => {
+    setProducts((current) => current.filter((product) => product.id !== productId));
+  };
+
+  const handleUpdateStock = (productId, direction) => {
+    setProducts((current) =>
+      current.map((product) =>
+        product.id === productId
+          ? { ...product, stock: Math.max(0, product.stock + direction) }
+          : product
+      )
+    );
+  };
+
   const confirmDelete = () => {
     if (!pendingDelete) return;
-    onDeleteProduct(pendingDelete.id);
+    handleDeleteProduct(pendingDelete.id);
     setPendingDelete(null);
   };
 
@@ -60,7 +101,7 @@ const ProductList = ({
         description="Use this static design layout for featured products, palette planning, and stock visibility. The structure is ready for API wiring later."
         actions={[
           <SellerButton key="filter" variant="ghost" type="button" className="min-h-[32px] rounded-[10px] px-3 text-[11px] sm:w-auto"><Filter size={13} /> Filter</SellerButton>,
-          <SellerButton key="add" type="button" className="min-h-[32px] rounded-[10px] px-3 text-[11px] sm:w-auto" onClick={onAddProduct}><Plus size={13} /> Add Product</SellerButton>,
+          <SellerButton key="add" type="button" className="min-h-[32px] rounded-[10px] px-3 text-[11px] sm:w-auto" onClick={openAddProductModal}><Plus size={13} /> Add Product</SellerButton>,
         ]}
       >
         <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -111,7 +152,7 @@ const ProductList = ({
                         <div className="flex items-center gap-2">
                           <button
                             type="button"
-                            onClick={() => onEditProduct(product.id)}
+                            onClick={() => openEditProductModal(product)}
                             className="flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-[#7a1e2c] shadow-sm transition hover:bg-white"
                             aria-label={`Edit ${product.name}`}
                           >
@@ -197,7 +238,7 @@ const ProductList = ({
                             <div className="inline-flex items-center gap-2 rounded-full border border-[#ead8cf] bg-white p-1.5">
                               <button
                                 type="button"
-                                onClick={() => onUpdateStock(product.id, -1)}
+                                onClick={() => handleUpdateStock(product.id, -1)}
                                 className="flex h-9 w-9 items-center justify-center rounded-full bg-[#f8ede7] text-[#7a1e2c] shadow-sm transition hover:bg-[#f1ddd4]"
                                 aria-label={`Decrease stock for ${product.name}`}
                               >
@@ -206,7 +247,7 @@ const ProductList = ({
                               <span className="min-w-[48px] text-center text-sm font-semibold text-[#351915]">{product.stock}</span>
                               <button
                                 type="button"
-                                onClick={() => onUpdateStock(product.id, 1)}
+                                onClick={() => handleUpdateStock(product.id, 1)}
                                 className="flex h-9 w-9 items-center justify-center rounded-full bg-[#7a1e2c] text-white shadow-sm transition hover:bg-[#651623]"
                                 aria-label={`Increase stock for ${product.name}`}
                               >
@@ -224,6 +265,15 @@ const ProductList = ({
           )}
         </SellerSectionCard>
       </SellerPageShell>
+
+      <AddUpdateProduct
+        open={isProductModalOpen}
+        mode={productModalMode}
+        product={selectedProduct}
+        products={products}
+        onClose={closeProductModal}
+        onSaveProduct={handleSaveProduct}
+      />
 
       <ConfirmationModal
         open={Boolean(pendingDelete)}

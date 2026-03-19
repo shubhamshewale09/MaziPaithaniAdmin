@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { ImagePlus, X } from "lucide-react";
+import { sellerProducts } from "../../data/sellerStaticData";
 import { SellerButton } from "../../components/seller/SellerUI";
 
 const emptyForm = {
@@ -14,12 +15,53 @@ const emptyForm = {
 
 const imageSlots = ["Main Image", "Gallery 2", "Gallery 3", "Gallery 4", "Gallery 5"];
 
-const AddUpdateProduct = ({ open, mode, initialValues, onClose, onSave }) => {
+const buildFormState = (product) => ({
+  id: product?.id || "",
+  productName: product?.name || "",
+  category: product?.category || "Pure Paithani",
+  price: product?.price ? String(product.price) : "",
+  stock: product?.stock !== undefined ? String(product.stock) : "",
+  palette: product?.palette || "",
+  description: product?.weave || "",
+});
+
+const createProductId = (products) => {
+  const highestId = products.reduce((maxId, product) => {
+    const numericPart = Number(product.id?.replace(/[^0-9]/g, "")) || 0;
+    return Math.max(maxId, numericPart);
+  }, 100);
+
+  return `PRD-${highestId + 1}`;
+};
+
+const buildProductPayload = (formState, fallbackProduct, products) => {
+  const baseImages = fallbackProduct?.images || [
+    { label: "Front View", src: sellerProducts[0].images[0].src },
+    { label: "Pallu Detail", src: sellerProducts[0].images[1].src },
+    { label: "Border Closeup", src: sellerProducts[0].images[2].src },
+  ];
+
+  return {
+    id: fallbackProduct?.id || createProductId(products),
+    name: formState.productName.trim() || "Untitled Paithani",
+    category: formState.category,
+    stock: Number(formState.stock) || 0,
+    price: Number(formState.price) || 0,
+    palette: formState.palette.trim() || "Custom palette",
+    weave: formState.description.trim() || "Seller-added product description will appear here.",
+    status: fallbackProduct?.status || "Active",
+    images: baseImages,
+  };
+};
+
+const AddUpdateProduct = ({ open, mode = "add", product = null, products = [], onClose, onSaveProduct }) => {
   const [formState, setFormState] = useState(emptyForm);
 
   useEffect(() => {
-    setFormState(initialValues || emptyForm);
-  }, [initialValues, open]);
+    if (open) {
+      setFormState(buildFormState(product));
+    }
+  }, [product, open]);
 
   if (!open) {
     return null;
@@ -32,7 +74,8 @@ const AddUpdateProduct = ({ open, mode, initialValues, onClose, onSave }) => {
 
   const handleSubmit = (event) => {
     event.preventDefault();
-    onSave(formState);
+    const nextProduct = buildProductPayload(formState, product, products);
+    onSaveProduct(nextProduct);
   };
 
   return (

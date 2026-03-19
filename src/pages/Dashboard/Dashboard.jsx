@@ -17,7 +17,7 @@ import { useState, useEffect } from "react";
 import Sidebar from "../../components/custom/Sidebar";
 import Header from "../../components/custom/header";
 import Profile from "../Profile/Profile";
-import Products from "../Products/Products";
+import Products from "../Products/ProductList";
 import Orders from "../Orders/Orders";
 import Enquiries from "../Enquiries/Enquiries";
 import Revenue from "../Revenue/Revenue";
