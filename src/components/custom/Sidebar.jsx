@@ -44,13 +44,13 @@ const Sidebar = ({
           type="button"
           aria-label="Close sidebar overlay"
           onClick={onClose}
-          className="fixed inset-0 top-[74px] z-30 bg-[#2d140f]/45 backdrop-blur-[2px] lg:hidden"
+          className="fixed inset-0 top-[74px] z-10 bg-[#2d140f]/45 backdrop-blur-[2px] lg:hidden"
         />
       )}
 
       <aside
         className={[
-          "fixed left-0 top-[74px] z-20 flex h-[calc(100vh-74px)] flex-col border-r border-white/40",
+          "fixed left-0 top-[74px] z-30 flex h-[calc(100vh-74px)] flex-col border-r border-white/40",
           "bg-gradient-to-b from-[#5f1320] via-[#7b1d2a] to-[#24090f] text-white shadow-2xl",
           "transition-all duration-300 ease-out",
           isMobile

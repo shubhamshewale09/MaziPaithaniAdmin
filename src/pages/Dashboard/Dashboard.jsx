@@ -17,6 +17,11 @@ import { useState, useEffect } from "react";
 import Sidebar from "../../components/custom/Sidebar";
 import Header from "../../components/custom/header";
 import Profile from "../Profile/Profile";
+import Products from "../Products/ProductList";
+import Orders from "../Orders/Orders";
+import Enquiries from "../Enquiries/Enquiries";
+import Revenue from "../Revenue/Revenue";
+import Settings from "../Settings/Settings";
 
 const Dashboard = () => {
   const { logout } = useAuth();
@@ -53,6 +58,10 @@ const Dashboard = () => {
 
     return () => window.removeEventListener("resize", handleResize);
   }, []);
+
+  const loginData = JSON.parse(localStorage.getItem("login") || "null");
+  const shouldForceProfileCompletion =
+    loginData?.isSellerProfileComplete === false && activeTab === "profile";
 
   const data = {
     totalUsers: 120,
@@ -135,6 +144,8 @@ const Dashboard = () => {
   };
 
   const toggleSidebar = () => {
+    if (shouldForceProfileCompletion) return;
+
     if (isMobile) {
       setIsMobileSidebarOpen((prev) => !prev);
       return;
@@ -146,18 +157,6 @@ const Dashboard = () => {
   const closeMobileSidebar = () => {
     setIsMobileSidebarOpen(false);
   };
-
-  const renderTabPlaceholder = (title, desc) => (
-    <section className="dashboard-fade-up rounded-[28px] border border-white/70 bg-white/90 p-6 shadow-[0_20px_60px_rgba(94,35,23,0.08)] sm:p-8">
-      <div className="max-w-2xl">
-        <p className="text-xs font-semibold uppercase tracking-[0.28em] text-[#a0806d]">
-          Workspace
-        </p>
-        <h2 className="mt-3 text-2xl font-bold text-[#3d1e17] sm:text-3xl">{title}</h2>
-        <p className="mt-3 text-sm leading-7 text-[#6d5b55] sm:text-base">{desc}</p>
-      </div>
-    </section>
-  );
 
   const renderDashboardHome = () => (
     <div className="space-y-6 sm:space-y-8">
@@ -254,15 +253,15 @@ const Dashboard = () => {
       case "profile":
         return <Profile />;
       case "products":
-        return renderTabPlaceholder("Products", "Manage product listings, approvals, and seller catalog health from this section.");
+        return <Products />;
       case "orders":
-        return renderTabPlaceholder("Orders", "Review transactions, track delivery flow, and keep order resolution moving smoothly.");
+        return <Orders />;
       case "enquiries":
-        return renderTabPlaceholder("Enquiries", "Stay on top of buyer questions and seller communication with faster follow-ups.");
+        return <Enquiries />;
       case "revenue":
-        return renderTabPlaceholder("Revenue", "Monitor collections, compare trends, and keep marketplace performance visible.");
+        return <Revenue />;
       case "settings":
-        return renderTabPlaceholder("Settings", "Tune platform preferences, access controls, and admin-level dashboard behavior.");
+        return <Settings />;
       default:
         return renderDashboardHome();
     }
@@ -272,27 +271,37 @@ const Dashboard = () => {
     <>
       <MetaTitle title="Dashboard" />
 
-      <div className="min-h-screen bg-[#f7f1ed]">
+      <div className="min-h-screen overflow-x-hidden bg-[#f7f1ed]">
         <Header
           onMenuClick={toggleSidebar}
           activeTab={activeTab}
-          isMobile={isMobile}
+          showMenuButton={!shouldForceProfileCompletion}
+          showLogoutButton={shouldForceProfileCompletion}
+          onLogout={handleLogout}
         />
 
-        <Sidebar
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
-          onLogout={handleLogout}
-          isCollapsed={isSidebarCollapsed}
-          isMobile={isMobile}
-          isOpen={isMobileSidebarOpen}
-          onClose={closeMobileSidebar}
-        />
+        {!shouldForceProfileCompletion && (
+          <Sidebar
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            onLogout={handleLogout}
+            isCollapsed={isSidebarCollapsed}
+            isMobile={isMobile}
+            isOpen={isMobileSidebarOpen}
+            onClose={closeMobileSidebar}
+          />
+        )}
 
         <main
           className={[
-            "relative min-h-screen px-4 pb-8 pt-[94px] transition-all duration-300 ease-out sm:px-6 lg:px-8",
-            isMobile ? "ml-0" : isSidebarCollapsed ? "lg:ml-[92px]" : "lg:ml-[280px]",
+            "relative min-h-screen overflow-x-hidden px-4 pb-8 pt-[94px] transition-all duration-300 ease-out sm:px-6 lg:px-8",
+            shouldForceProfileCompletion
+              ? "ml-0"
+              : isMobile
+                ? "ml-0"
+                : isSidebarCollapsed
+                  ? "lg:ml-[92px]"
+                  : "lg:ml-[280px]",
           ].join(" ")}
         >
           <div className="absolute inset-x-0 top-[74px] -z-10 h-[320px] bg-[radial-gradient(circle_at_top_right,_rgba(201,162,39,0.18),_transparent_34%),radial-gradient(circle_at_top_left,_rgba(122,30,44,0.12),_transparent_30%)]" />
