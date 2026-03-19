@@ -1,0 +1,133 @@
+import React, { useEffect, useState } from "react";
+import { ImagePlus, X } from "lucide-react";
+import { SellerButton } from "../../components/seller/SellerUI";
+
+const emptyForm = {
+  id: "",
+  productName: "",
+  category: "Pure Paithani",
+  price: "",
+  stock: "",
+  palette: "",
+  description: "",
+};
+
+const imageSlots = ["Main Image", "Gallery 2", "Gallery 3", "Gallery 4", "Gallery 5"];
+
+const AddUpdateProduct = ({ open, mode, initialValues, onClose, onSave }) => {
+  const [formState, setFormState] = useState(emptyForm);
+
+  useEffect(() => {
+    setFormState(initialValues || emptyForm);
+  }, [initialValues, open]);
+
+  if (!open) {
+    return null;
+  }
+
+  const handleChange = (event) => {
+    const { name, value } = event.target;
+    setFormState((current) => ({ ...current, [name]: value }));
+  };
+
+  const handleSubmit = (event) => {
+    event.preventDefault();
+    onSave(formState);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-[#2d140f]/45 px-4 py-8 backdrop-blur-[3px] sm:py-12">
+      <div className="w-full max-w-5xl rounded-[22px] border border-[#ead8cf] bg-[#fffaf6] shadow-[0_30px_80px_rgba(45,20,15,0.22)]">
+        <div className="flex items-center justify-between gap-4 border-b border-[#f1dfd7] px-5 py-4 sm:px-7 sm:py-5">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.24em] text-[#a27c68]">Seller Product Form</p>
+            <h2 className="mt-2 text-2xl font-bold text-[#381c17] sm:text-[1.8rem]">
+              {mode === "edit" ? "Edit Product" : "Add Product"}
+            </h2>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-10 w-10 items-center justify-center rounded-[14px] bg-white text-[#7a1e2c] shadow-sm transition hover:bg-[#f8ede7]"
+            aria-label="Close product form"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        <form className="grid gap-6 px-5 py-5 sm:px-7 sm:py-7 lg:grid-cols-[1.1fr_0.9fr]" onSubmit={handleSubmit}>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="sm:col-span-2">
+              <label className="seller-label" htmlFor="productName">Product Name</label>
+              <input id="productName" name="productName" value={formState.productName} onChange={handleChange} className="seller-input" placeholder="Enter Paithani product name" />
+            </div>
+
+            <div>
+              <label className="seller-label" htmlFor="category">Category</label>
+              <select id="category" name="category" value={formState.category} onChange={handleChange} className="seller-select">
+                <option>Pure Paithani</option>
+                <option>Bridal Collection</option>
+                <option>Festival Collection</option>
+                <option>Contemporary Edit</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="seller-label" htmlFor="palette">Color Palette</label>
+              <input id="palette" name="palette" value={formState.palette} onChange={handleChange} className="seller-input" placeholder="Mulberry and Gold" />
+            </div>
+
+            <div>
+              <label className="seller-label" htmlFor="price">Price</label>
+              <input id="price" name="price" value={formState.price} onChange={handleChange} className="seller-input" placeholder="48500" />
+            </div>
+
+            <div>
+              <label className="seller-label" htmlFor="stock">Available Stock</label>
+              <input id="stock" name="stock" value={formState.stock} onChange={handleChange} className="seller-input" placeholder="4" />
+            </div>
+
+            <div className="sm:col-span-2">
+              <label className="seller-label" htmlFor="description">Description</label>
+              <textarea id="description" name="description" value={formState.description} onChange={handleChange} className="seller-textarea min-h-[120px]" placeholder="Write a short product description for the seller catalogue." />
+            </div>
+          </div>
+
+          <div className="seller-soft-panel rounded-[18px] p-5 sm:p-6">
+            <div className="flex min-h-[220px] items-center justify-center rounded-[16px] border border-dashed border-[#d8b8ab] bg-white/80 px-4 py-6">
+              <div className="text-center">
+                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-[16px] bg-[#fff1e7] text-[#7a1e2c]">
+                  <ImagePlus size={24} />
+                </div>
+                <p className="mt-4 text-sm font-semibold text-[#381c17]">Upload up to 5 product images</p>
+                <p className="mt-2 max-w-[260px] text-sm leading-6 text-[#7a645b]">
+                  Keep this area for main image plus 4 gallery images when we connect the real add product API.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+              {imageSlots.map((label, index) => (
+                <div key={label} className="rounded-[16px] border border-[#e9d8ce] bg-white px-3 py-4 text-center text-xs font-semibold text-[#7d655d]">
+                  <p>{label}</p>
+                  <p className="mt-1 text-[10px] font-medium uppercase tracking-[0.12em] text-[#b08c78]">Slot {index + 1}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="lg:col-span-2 flex flex-col gap-3 border-t border-[#f1dfd7] pt-2 sm:flex-row sm:justify-end">
+            <SellerButton type="submit" className="min-h-[38px] rounded-[12px] px-4 text-sm sm:w-auto">
+              {mode === "edit" ? "Update Product" : "Save Product"}
+            </SellerButton>
+            <SellerButton type="button" variant="ghost" className="min-h-[38px] rounded-[12px] px-4 text-sm sm:w-auto" onClick={onClose}>
+              Cancel
+            </SellerButton>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+export default AddUpdateProduct;

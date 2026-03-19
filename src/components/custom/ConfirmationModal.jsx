@@ -1,101 +1,57 @@
 import React from "react";
+import { AlertTriangle, X } from "lucide-react";
+import { SellerButton } from "../seller/SellerUI";
 
 const ConfirmationModal = ({
-  show,
-  onHide,
-  actionType, // delete, status, other
+  open,
+  title = "Are you sure?",
+  message = "Please confirm this action.",
+  confirmLabel = "Confirm",
+  cancelLabel = "Cancel",
   onConfirm,
-  modelRequestData,
+  onClose,
 }) => {
-
-  if (!show) return null;
+  if (!open) {
+    return null;
+  }
 
   return (
-    <>
-      <div
-        className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-        aria-hidden={!show}
-      >
-        <div className="bg-white rounded-lg shadow-lg w-11/12 max-w-xl mx-auto flex flex-col">
-          {/* Modal Header */}
-          <div className="flex justify-between items-center p-4 border-b sticky top-0 bg-white z-10">
-            <h2 className="text-16 font-bold text-gray-700">Confirmation</h2>
-
-            <button
-              className="text-gray-500 hover:text-gray-800"
-              onClick={onHide}
-              aria-label="Close"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-6 w-6"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-            </button>
-          </div>
-
-          {/* Modal Content */}
-          <div
-            className="container mx-auto p-5 overflow-y-auto flex-grow flex flex-col items-center"
-            style={{ maxHeight: "60vh" }}
-          >
-            {/* Confirmation Icon */}
-            <div className="w-16 h-16 mb-4 rounded-full bg-orange-100 flex items-center justify-center">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-8 w-8 text-[#E86B1B]"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 8v4m0 4h.01M12 2a10 10 0 100 20 10 10 0 000-20z"
-                />
-              </svg>
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-[#2d140f]/45 px-4 backdrop-blur-[3px]">
+      <div className="w-full max-w-md rounded-[20px] border border-[#ead8cf] bg-[#fffaf6] shadow-[0_30px_80px_rgba(45,20,15,0.22)]">
+        <div className="flex items-center justify-between border-b border-[#f1dfd7] px-5 py-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-[14px] bg-[#fff1e7] text-[#b42318]">
+              <AlertTriangle size={20} />
             </div>
-
-            {/* Confirmation Message */}
-            <h3 className="text-center mb-3 font-bold text-gray-700 text-16 px-4">
-              {actionType === "Delete"
-                ? "Are you sure you want to delete this record?"
-                : actionType === "Status"
-                  ? `Are you sure you want to change the status?`
-                  : actionType === "Start Task"
-                    ? "Are you sure you want to start this task?"
-                    : `Are you sure you want to ${actionType}?`}
-            </h3>
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#a27c68]">Confirmation</p>
+              <h3 className="mt-1 text-lg font-bold text-[#381c17]">{title}</h3>
+            </div>
           </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-9 w-9 items-center justify-center rounded-[12px] bg-white text-[#7a1e2c] shadow-sm transition hover:bg-[#f8ede7]"
+            aria-label="Close confirmation modal"
+          >
+            <X size={16} />
+          </button>
+        </div>
 
-          {/* Modal Footer */}
-          <div className="flex justify-center gap-4 p-4 border-t sticky bottom-0 bg-white z-25 text-12">
-            <button
-              className="px-4 py-2 bg-gray-300 text-gray-800 rounded hover:bg-gray-400"
-              onClick={onHide}
-            >
-              No
-            </button>
-            <button
-              className="bg-gradient-to-r from-primary to-primary-light hover:opacity-90 text-white px-5 py-2 rounded-lg text-12 font-medium shadow-md  transition-all duration-300"
-              onClick={onConfirm}
-            >
-              Yes
-            </button>
+        <div className="px-5 py-5">
+          <p className="text-sm leading-7 text-[#6d5850]">{message}</p>
+
+          <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:justify-end">
+            <SellerButton type="button" variant="ghost" className="min-h-[38px] rounded-[12px] px-4 text-sm sm:w-auto" onClick={onClose}>
+              {cancelLabel}
+            </SellerButton>
+            <SellerButton type="button" className="min-h-[38px] rounded-[12px] px-4 text-sm sm:w-auto" onClick={onConfirm}>
+              {confirmLabel}
+            </SellerButton>
           </div>
         </div>
       </div>
-    </>
+    </div>
   );
 };
 

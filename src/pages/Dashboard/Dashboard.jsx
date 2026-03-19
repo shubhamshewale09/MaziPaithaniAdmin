@@ -17,6 +17,11 @@ import { useState, useEffect } from "react";
 import Sidebar from "../../components/custom/Sidebar";
 import Header from "../../components/custom/header";
 import Profile from "../Profile/Profile";
+import Products from "../Products/Products";
+import Orders from "../Orders/Orders";
+import Enquiries from "../Enquiries/Enquiries";
+import Revenue from "../Revenue/Revenue";
+import Settings from "../Settings/Settings";
 
 const Dashboard = () => {
   const { logout } = useAuth();
@@ -153,18 +158,6 @@ const Dashboard = () => {
     setIsMobileSidebarOpen(false);
   };
 
-  const renderTabPlaceholder = (title, desc) => (
-    <section className="dashboard-fade-up rounded-[28px] border border-white/70 bg-white/90 p-6 shadow-[0_20px_60px_rgba(94,35,23,0.08)] sm:p-8">
-      <div className="max-w-2xl">
-        <p className="text-xs font-semibold uppercase tracking-[0.28em] text-[#a0806d]">
-          Workspace
-        </p>
-        <h2 className="mt-3 text-2xl font-bold text-[#3d1e17] sm:text-3xl">{title}</h2>
-        <p className="mt-3 text-sm leading-7 text-[#6d5b55] sm:text-base">{desc}</p>
-      </div>
-    </section>
-  );
-
   const renderDashboardHome = () => (
     <div className="space-y-6 sm:space-y-8">
       <section className="dashboard-fade-up relative overflow-hidden rounded-[30px] border border-[#f3dfd6] bg-gradient-to-br from-[#fff9f4] via-[#fff3eb] to-[#fdf7ef] p-6 shadow-[0_20px_70px_rgba(122,30,44,0.09)] sm:p-8 lg:p-10">
@@ -260,15 +253,15 @@ const Dashboard = () => {
       case "profile":
         return <Profile />;
       case "products":
-        return renderTabPlaceholder("Products", "Manage product listings, approvals, and seller catalog health from this section.");
+        return <Products />;
       case "orders":
-        return renderTabPlaceholder("Orders", "Review transactions, track delivery flow, and keep order resolution moving smoothly.");
+        return <Orders />;
       case "enquiries":
-        return renderTabPlaceholder("Enquiries", "Stay on top of buyer questions and seller communication with faster follow-ups.");
+        return <Enquiries />;
       case "revenue":
-        return renderTabPlaceholder("Revenue", "Monitor collections, compare trends, and keep marketplace performance visible.");
+        return <Revenue />;
       case "settings":
-        return renderTabPlaceholder("Settings", "Tune platform preferences, access controls, and admin-level dashboard behavior.");
+        return <Settings />;
       default:
         return renderDashboardHome();
     }
