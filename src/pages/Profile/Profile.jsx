@@ -6,8 +6,7 @@ import {
   SaveBankDetails,
   GetSellerDashboard,
 } from '../../services/auth/Profile';
-import { showApiError } from '../../Utils/Utils';
-import { toast } from 'react-toastify';
+import { showApiError, showApiSuccess } from '../../Utils/Utils';
 import MetaTitle from "../../components/custom/MetaTitle";
 
 const Profile = () => {
@@ -162,9 +161,8 @@ const Profile = () => {
         console.log('Shop Info Payload being sent:', shopInfoPayload);
         const response = await SaveShopInfo(shopInfoPayload);
 
-        // Show success message using toast
         if (response && response.message) {
-          toast.success(response.message);
+          showApiSuccess(response.message);
         }
 
         // Call dashboard API to get sellerId after successful shop info save
@@ -192,9 +190,8 @@ const Profile = () => {
         console.log('Bank Details Payload being sent:', bankDetailsPayload);
         const response = await SaveBankDetails(bankDetailsPayload);
 
-        // Show success message using toast
         if (response && response.message) {
-          toast.success(response.message);
+          showApiSuccess(response.message);
         }
       }
 

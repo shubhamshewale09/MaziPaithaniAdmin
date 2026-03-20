@@ -6,9 +6,8 @@ import { useFormik } from "formik";
 import * as Yup from "yup";
 import validator from "validator";
 import { AuthRegister } from "../../services/auth/Register";
-import { showApiError } from "../../Utils/Utils";
+import { showApiError, showApiSuccess } from "../../Utils/Utils";
 import MetaTitle from "../../components/custom/MetaTitle";
-import { toast } from "react-toastify";
 
 const initialFormState = {
   sFirstName: "",
@@ -16,6 +15,7 @@ const initialFormState = {
   sEmail: "",
   sPhoneNumber: "",
   sPassword: "",
+  accountType: "seller",
 };
 
 const registerValidationSchema = Yup.object({
@@ -39,6 +39,9 @@ const registerValidationSchema = Yup.object({
       value ? /^\d{10}$/.test(value) : false
     ),
   sPassword: Yup.string().required("Password required"),
+  accountType: Yup.string()
+    .oneOf(["seller", "user"], "Select account type")
+    .required("Account type required"),
 });
 
 const Register = () => {
@@ -54,7 +57,11 @@ const Register = () => {
       try {
         setLoading(true);
 
-        const payload = { ...values, roleId: 1 };
+        const { accountType, ...restValues } = values;
+        const payload = {
+          ...restValues,
+          roleId: accountType === "seller" ? 2 : 3,
+        };
         const res = await AuthRegister(payload);
         const responseMessage = (
           res?.message ||
@@ -77,7 +84,7 @@ const Register = () => {
 
         if (isSuccess) {
           resetForm();
-          toast.success(res?.message || "Registration successful");
+          showApiSuccess(res?.message || "Registration successful");
           navigate("/login", { replace: true });
           return;
         }
@@ -205,6 +212,60 @@ const Register = () => {
               </button>
               {getFieldError("sPassword") && (
                 <p className="text-red-500 text-xs">{getFieldError("sPassword")}</p>
+              )}
+            </div>
+
+            <div className="md:col-span-2">
+              <p className="text-sm font-semibold text-[#7a1e2c] mb-3">
+                Register as
+              </p>
+              <div className="grid sm:grid-cols-2 gap-3">
+                <label
+                  className={`flex items-center gap-3 rounded-xl border p-4 cursor-pointer transition-all ${
+                    formik.values.accountType === "seller"
+                      ? "border-[#7a1e2c] bg-[#7a1e2c]/5"
+                      : "border-gray-200"
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="accountType"
+                    value="seller"
+                    checked={formik.values.accountType === "seller"}
+                    onChange={formik.handleChange}
+                    onBlur={formik.handleBlur}
+                    className="accent-[#7a1e2c]"
+                  />
+                  <div>
+                    <p className="font-semibold text-gray-900">Seller</p>
+                  </div>
+                </label>
+
+                <label
+                  className={`flex items-center gap-3 rounded-xl border p-4 cursor-pointer transition-all ${
+                    formik.values.accountType === "user"
+                      ? "border-[#7a1e2c] bg-[#7a1e2c]/5"
+                      : "border-gray-200"
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="accountType"
+                    value="user"
+                    checked={formik.values.accountType === "user"}
+                    onChange={formik.handleChange}
+                    onBlur={formik.handleBlur}
+                    className="accent-[#7a1e2c]"
+                  />
+                  <div>
+                    <p className="font-semibold text-gray-900">User</p>
+                  </div>
+                </label>
+              </div>
+              {getFieldError("accountType") && (
+                <p className="text-red-500 text-xs mt-2">
+                  {getFieldError("accountType")}
+                </p>
               )}
             </div>
 
