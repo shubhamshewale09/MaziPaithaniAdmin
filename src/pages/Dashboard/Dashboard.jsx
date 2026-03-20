@@ -16,12 +16,14 @@ import MetaTitle from "../../components/custom/MetaTitle";
 import { useState, useEffect } from "react";
 import Sidebar from "../../components/custom/Sidebar";
 import Header from "../../components/custom/header";
+import ConfirmationModal from "../../components/custom/ConfirmationModal";
 import Profile from "../Profile/Profile";
 import Products from "../Products/ProductList";
 import Orders from "../Orders/Orders";
 import Enquiries from "../Enquiries/Enquiries";
 import Revenue from "../Revenue/Revenue";
 import Settings from "../Settings/Settings";
+import { showApiSuccess } from "../../Utils/Utils";
 
 const Dashboard = () => {
   const { logout } = useAuth();
@@ -30,6 +32,7 @@ const Dashboard = () => {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(
     typeof window !== "undefined" ? window.innerWidth < 1024 : false
   );
@@ -134,13 +137,17 @@ const Dashboard = () => {
     },
   ];
 
-  const handleLogout = () => {
+  const confirmLogout = () => {
     logout();
     localStorage.removeItem("login");
     localStorage.removeItem("token");
     localStorage.removeItem("UserId");
     localStorage.removeItem("RoleId");
-    navigate("/");
+    setIsLogoutModalOpen(false);
+    showApiSuccess("Logout successful");
+    window.setTimeout(() => {
+      navigate("/");
+    }, 350);
   };
 
   const toggleSidebar = () => {
@@ -277,14 +284,14 @@ const Dashboard = () => {
           activeTab={activeTab}
           showMenuButton={!shouldForceProfileCompletion}
           showLogoutButton={shouldForceProfileCompletion}
-          onLogout={handleLogout}
+          onLogout={() => setIsLogoutModalOpen(true)}
         />
 
         {!shouldForceProfileCompletion && (
           <Sidebar
             activeTab={activeTab}
             setActiveTab={setActiveTab}
-            onLogout={handleLogout}
+            onLogout={() => setIsLogoutModalOpen(true)}
             isCollapsed={isSidebarCollapsed}
             isMobile={isMobile}
             isOpen={isMobileSidebarOpen}
@@ -307,6 +314,16 @@ const Dashboard = () => {
           <div className="absolute inset-x-0 top-[74px] -z-10 h-[320px] bg-[radial-gradient(circle_at_top_right,_rgba(201,162,39,0.18),_transparent_34%),radial-gradient(circle_at_top_left,_rgba(122,30,44,0.12),_transparent_30%)]" />
           {renderContent()}
         </main>
+
+        <ConfirmationModal
+          open={isLogoutModalOpen}
+          title="Logout now?"
+          message="Do you want to logout from your account?"
+          confirmLabel="Logout"
+          cancelLabel="Stay Here"
+          onConfirm={confirmLogout}
+          onClose={() => setIsLogoutModalOpen(false)}
+        />
       </div>
     </>
   );

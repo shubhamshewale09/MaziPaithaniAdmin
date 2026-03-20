@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { Mail, Phone } from 'lucide-react';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
@@ -50,6 +50,7 @@ const Login = () => {
     loginId: '',
     password: '',
   });
+  const isSubmittingRef = useRef(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -69,6 +70,10 @@ const Login = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (loading || isSubmittingRef.current) {
+      return;
+    }
 
     let hasError = false;
     const newErrors = { loginId: '', password: '' };
@@ -97,6 +102,7 @@ const Login = () => {
     }
 
     try {
+      isSubmittingRef.current = true;
       setLoading(true);
 
       const payload = {
@@ -144,6 +150,7 @@ const Login = () => {
       console.log('error==>>', error);
       showApiError(error.response?.data || { message: 'Something went wrong' });
     } finally {
+      isSubmittingRef.current = false;
       setLoading(false);
     }
   };
