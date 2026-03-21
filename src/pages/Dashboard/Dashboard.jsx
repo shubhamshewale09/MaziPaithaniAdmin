@@ -294,13 +294,13 @@ const Dashboard = () => {
           activeTab={activeTab}
           showMenuButton={!shouldForceProfileCompletion}
           showLogoutButton={false}
-          onLogout={handleLogout}
+          onLogout={() => setIsLogoutModalOpen(true)}
         />
 
         <Sidebar
           activeTab={activeTab}
           setActiveTab={setActiveTab}
-          onLogout={handleLogout}
+          onLogout={() => setIsLogoutModalOpen(true)}
           isCollapsed={isSidebarCollapsed}
           isMobile={isMobile}
           isOpen={isMobileSidebarOpen}
