@@ -1,4 +1,4 @@
-import { toast } from "react-toastify";
+import { showGlobalError, showGlobalSuccess } from "./feedbackModal";
 //default values
 export const pageSize = 10;
 export const pagesArray = [10, 15, 20, 40];
@@ -83,15 +83,11 @@ export const statusOptions = [
 
 //=================functions==================
 export const showApiError = (errorOrRes) => {
-  const data = errorOrRes?.response?.data || errorOrRes?.data || errorOrRes;
+  showGlobalError(errorOrRes, "Something went wrong. Please try again.");
+};
 
-  const message =
-    Object.values(data?.errors || {})?.[0]?.[0] ||
-    data?.errorMessage ||
-    data?.message ||
-    "Something went wrong. Please try again.";
-
-  toast.error(message);
+export const showApiSuccess = (successOrRes) => {
+  showGlobalSuccess(successOrRes, "Action completed successfully.");
 };
 
 //10 digits value using eplise

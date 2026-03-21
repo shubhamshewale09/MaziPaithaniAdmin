@@ -1,7 +1,5 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
-import { ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 
@@ -18,9 +16,6 @@ L.Icon.Default.mergeOptions({
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(
   <React.StrictMode>
-    <>
-      <ToastContainer position="top-right" autoClose={3000} />
-      <App />
-    </>
+    <App />
   </React.StrictMode>
 );

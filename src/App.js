@@ -1,13 +1,12 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Suspense, lazy } from "react";
 import { HelmetProvider } from "react-helmet-async";
-import { ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
 
 import { AuthProvider } from "./context/auth/AuthContext";
+import ApiFeedbackModal from "./components/custom/ApiFeedbackModal";
+import ApiRequestLoader from "./components/custom/ApiRequestLoader";
 import Loader from "./components/custom/Loader";
 
-// Lazy Load Pages
 const LandingPage = lazy(() => import("./pages/LandingPage/LandingPage"));
 const Login = lazy(() => import("./pages/Login/Login"));
 const Register = lazy(() => import("./pages/Register/Register"));
@@ -28,17 +27,11 @@ function App() {
     <AuthProvider>
       <HelmetProvider>
         <BrowserRouter>
-          
-          {/* ✅ Toast Container */}
-          <ToastContainer position="top-right" autoClose={3000} />
-
+          <ApiFeedbackModal />
+          <ApiRequestLoader />
           <Suspense fallback={<Loader />}>
             <Routes>
-
-              {/* Landing Page */}
               <Route path="/" element={<LandingPage />} />
-
-              {/* Login */}
               <Route
                 path="/login"
                 element={
@@ -47,8 +40,6 @@ function App() {
                   </PublicRoute>
                 }
               />
-
-              {/* Register */}
               <Route
                 path="/register"
                 element={
@@ -57,8 +48,6 @@ function App() {
                   </PublicRoute>
                 }
               />
-
-              {/* Dashboard (Protected) */}
               <Route
                 path="/dashboard"
                 element={
@@ -67,7 +56,6 @@ function App() {
                   </PrivateRoute>
                 }
               />
-
             </Routes>
           </Suspense>
         </BrowserRouter>

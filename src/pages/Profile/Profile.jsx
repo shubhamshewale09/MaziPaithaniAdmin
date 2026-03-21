@@ -667,9 +667,10 @@ const Profile = () => {
                           sCity: userData.SCity || '',
                           sState: userData.SState || '',
                           sPincode: userData.SPincode || '',
-                          sBusinessDescription: userData.SBusinessDescription || '',
+                          sBusinessDescription:
+                            userData.SBusinessDescription || '',
                         });
-                        
+
                         setBankDetails({
                           sAccountHolderName: userData.SAccountHolderName || '',
                           sAccountNumber: userData.SAccountNumber || '',

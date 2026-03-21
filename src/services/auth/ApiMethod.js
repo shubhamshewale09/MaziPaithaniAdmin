@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { startApiLoader, stopApiLoader } from '../../Utils/apiLoader';
 
 // Helper function to handle authorization errors
 const handleAuthorizationError = (error) => {
@@ -68,40 +69,52 @@ axiosInstance.interceptors.response.use(
 
 // POST API with Authorization
 export const postApiWithAuthorization = async (url, data) => {
+  startApiLoader();
   try {
     const response = await axiosInstance.post(url, data);
     return response.data;
   } catch (error) {
     handleAuthorizationError(error);
+  } finally {
+    stopApiLoader();
   }
 };
 
 // POST API without Authorization
 export const postApiWithoutAuthorization = async (url, data) => {
+  startApiLoader();
   try {
     const response = await axios.post(url, data);
     return response.data;
   } catch (error) {
     throw error;
+  } finally {
+    stopApiLoader();
   }
 };
 
 // GET API with Authorization
 export const getApiWithAuthorization = async (url) => {
+  startApiLoader();
   try {
     const response = await axiosInstance.get(url);
     return response.data;
   } catch (error) {
     handleAuthorizationError(error);
+  } finally {
+    stopApiLoader();
   }
 };
 
 // GET API without Authorization
 export const getApiWithoutAuthorization = async (url) => {
+  startApiLoader();
   try {
     const response = await axios.get(url);
     return response.data;
   } catch (error) {
     throw error;
+  } finally {
+    stopApiLoader();
   }
 };

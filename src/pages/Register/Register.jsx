@@ -62,7 +62,11 @@ const Register = () => {
       try {
         setLoading(true);
 
-        const payload = { ...values, roleId: 2 };
+        const { accountType, ...restValues } = values;
+        const payload = {
+          ...restValues,
+          roleId: accountType === 'seller' ? 2 : 3,
+        };
         const res = await AuthRegister(payload);
         const responseMessage = (
           res?.message ||

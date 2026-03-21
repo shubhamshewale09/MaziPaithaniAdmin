@@ -1,28 +1,40 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { ImagePlus, X } from "lucide-react";
 import { sellerProducts } from "../../data/sellerStaticData";
 import { SellerButton } from "../../components/seller/SellerUI";
+import { GetProductCategories } from "../../services/Product/ProductApi";
+import { showApiError } from "../../Utils/Utils";
 
 const emptyForm = {
   id: "",
+  iProductId: null,
   productName: "",
-  category: "Pure Paithani",
+  categoryId: "",
+  categoryLabel: "",
   price: "",
   stock: "",
-  palette: "",
+  color: "",
+  fabric: "",
+  designType: "",
   description: "",
+  isCustomizationAvailable: "false",
 };
 
 const imageSlots = ["Main Image", "Gallery 2", "Gallery 3", "Gallery 4", "Gallery 5"];
 
 const buildFormState = (product) => ({
   id: product?.id || "",
+  iProductId: product?.iProductId ?? null,
   productName: product?.name || "",
-  category: product?.category || "Pure Paithani",
+  categoryId: product?.iCategoryId ? String(product.iCategoryId) : "",
+  categoryLabel: product?.category || "",
   price: product?.price ? String(product.price) : "",
   stock: product?.stock !== undefined ? String(product.stock) : "",
-  palette: product?.palette || "",
+  color: product?.color || product?.palette || "",
+  fabric: product?.fabric || "",
+  designType: product?.designType || "",
   description: product?.weave || "",
+  isCustomizationAvailable: product?.isCustomizationAvailable ? "true" : "false",
 });
 
 const createProductId = (products) => {
@@ -34,28 +46,104 @@ const createProductId = (products) => {
   return `PRD-${highestId + 1}`;
 };
 
-const buildProductPayload = (formState, fallbackProduct, products) => {
+const getFirstArray = (value) => {
+  if (Array.isArray(value)) {
+    return value;
+  }
+
+  if (value && typeof value === "object") {
+    for (const nestedValue of Object.values(value)) {
+      if (Array.isArray(nestedValue)) {
+        return nestedValue;
+      }
+    }
+  }
+
+  return [];
+};
+
+const normalizeCategoryOptions = (response) => {
+  const rawList = getFirstArray(response?.data) || getFirstArray(response?.responseData) || getFirstArray(response);
+
+  return rawList
+    .map((item, index) => {
+      const value =
+        item?.iCategoryId ??
+        item?.categoryId ??
+        item?.value ??
+        item?.id ??
+        item?.KeyId ??
+        item?.iId;
+
+      const label =
+        item?.sCategoryName ??
+        item?.categoryName ??
+        item?.sName ??
+        item?.name ??
+        item?.label ??
+        item?.Value;
+
+      if (value === undefined || value === null || !label) {
+        return null;
+      }
+
+      return {
+        value: String(value),
+        label: String(label),
+        sortOrder: item?.iDisplayOrder ?? item?.displayOrder ?? index,
+      };
+    })
+    .filter(Boolean)
+    .sort((left, right) => left.sortOrder - right.sortOrder);
+};
+
+const buildProductPayload = (formState, fallbackProduct, products, categoryOptions) => {
   const baseImages = fallbackProduct?.images || [
     { label: "Front View", src: sellerProducts[0].images[0].src },
     { label: "Pallu Detail", src: sellerProducts[0].images[1].src },
     { label: "Border Closeup", src: sellerProducts[0].images[2].src },
   ];
 
+  const selectedCategory = categoryOptions.find(
+    (item) => item.value === String(formState.categoryId)
+  );
+
   return {
     id: fallbackProduct?.id || createProductId(products),
+    iProductId: formState.iProductId,
+    iCategoryId: Number(formState.categoryId) || null,
     name: formState.productName.trim() || "Untitled Paithani",
-    category: formState.category,
+    category: selectedCategory?.label || formState.categoryLabel || "Category",
     stock: Number(formState.stock) || 0,
     price: Number(formState.price) || 0,
-    palette: formState.palette.trim() || "Custom palette",
-    weave: formState.description.trim() || "Seller-added product description will appear here.",
+    color: formState.color.trim(),
+    palette: formState.color.trim() || "Custom palette",
+    fabric: formState.fabric.trim(),
+    designType: formState.designType.trim(),
+    weave:
+      formState.description.trim() ||
+      "Seller-added product description will appear here.",
+    description:
+      formState.description.trim() ||
+      "Seller-added product description will appear here.",
+    isCustomizationAvailable: formState.isCustomizationAvailable === "true",
     status: fallbackProduct?.status || "Active",
     images: baseImages,
   };
 };
 
-const AddUpdateProduct = ({ open, mode = "add", product = null, products = [], onClose, onSaveProduct }) => {
+const AddUpdateProduct = ({
+  open,
+  mode = "add",
+  product = null,
+  products = [],
+  onClose,
+  onSaveProduct,
+}) => {
   const [formState, setFormState] = useState(emptyForm);
+  const [categoryOptions, setCategoryOptions] = useState([]);
+  const [categoryLoading, setCategoryLoading] = useState(false);
+  const hasFetchedCategoriesRef = useRef(false);
 
   useEffect(() => {
     if (open) {
@@ -63,19 +151,77 @@ const AddUpdateProduct = ({ open, mode = "add", product = null, products = [], o
     }
   }, [product, open]);
 
+  useEffect(() => {
+    if (!open) {
+      hasFetchedCategoriesRef.current = false;
+      return;
+    }
+
+    if (hasFetchedCategoriesRef.current) {
+      return;
+    }
+
+    const fetchCategories = async () => {
+      try {
+        hasFetchedCategoriesRef.current = true;
+        setCategoryLoading(true);
+        const response = await GetProductCategories();
+        setCategoryOptions(normalizeCategoryOptions(response));
+      } catch (error) {
+        hasFetchedCategoriesRef.current = false;
+        showApiError(
+          error?.response?.data || {
+            message: "Unable to load categories right now.",
+          }
+        );
+      } finally {
+        setCategoryLoading(false);
+      }
+    };
+
+    fetchCategories();
+  }, [open]);
+
+  const categoryPlaceholder = useMemo(() => {
+    if (categoryLoading) {
+      return "Loading categories...";
+    }
+
+    return categoryOptions.length > 0 ? "Select category" : "No categories found";
+  }, [categoryLoading, categoryOptions.length]);
+
   if (!open) {
     return null;
   }
 
   const handleChange = (event) => {
     const { name, value } = event.target;
-    setFormState((current) => ({ ...current, [name]: value }));
+
+    setFormState((current) => {
+      if (name === "categoryId") {
+        const selectedCategory = categoryOptions.find((item) => item.value === value);
+        return {
+          ...current,
+          categoryId: value,
+          categoryLabel: selectedCategory?.label || "",
+        };
+      }
+
+      return { ...current, [name]: value };
+    });
   };
 
   const handleSubmit = (event) => {
     event.preventDefault();
-    const nextProduct = buildProductPayload(formState, product, products);
-    onSaveProduct(nextProduct);
+
+    const nextProduct = buildProductPayload(
+      formState,
+      product,
+      products,
+      categoryOptions
+    );
+
+    onSaveProduct(nextProduct, mode);
   };
 
   return (
@@ -102,37 +248,132 @@ const AddUpdateProduct = ({ open, mode = "add", product = null, products = [], o
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="sm:col-span-2">
               <label className="seller-label" htmlFor="productName">Product Name</label>
-              <input id="productName" name="productName" value={formState.productName} onChange={handleChange} className="seller-input" placeholder="Enter Paithani product name" />
+              <input
+                id="productName"
+                name="productName"
+                value={formState.productName}
+                onChange={handleChange}
+                className="seller-input"
+                placeholder="Enter Paithani product name"
+              />
             </div>
 
             <div>
-              <label className="seller-label" htmlFor="category">Category</label>
-              <select id="category" name="category" value={formState.category} onChange={handleChange} className="seller-select">
-                <option>Pure Paithani</option>
-                <option>Bridal Collection</option>
-                <option>Festival Collection</option>
-                <option>Contemporary Edit</option>
+              <label className="seller-label" htmlFor="categoryId">Category</label>
+              <select
+                id="categoryId"
+                name="categoryId"
+                value={formState.categoryId}
+                onChange={handleChange}
+                className="seller-select"
+              >
+                <option value="">{categoryPlaceholder}</option>
+                {categoryOptions.map((category) => (
+                  <option key={category.value} value={category.value}>
+                    {category.label}
+                  </option>
+                ))}
               </select>
             </div>
 
             <div>
-              <label className="seller-label" htmlFor="palette">Color Palette</label>
-              <input id="palette" name="palette" value={formState.palette} onChange={handleChange} className="seller-input" placeholder="Mulberry and Gold" />
+              <label className="seller-label" htmlFor="color">Color</label>
+              <input
+                id="color"
+                name="color"
+                value={formState.color}
+                onChange={handleChange}
+                className="seller-input"
+                placeholder="Mulberry and Gold"
+              />
+            </div>
+
+            <div>
+              <label className="seller-label" htmlFor="fabric">Fabric</label>
+              <input
+                id="fabric"
+                name="fabric"
+                value={formState.fabric}
+                onChange={handleChange}
+                className="seller-input"
+                placeholder="Pure Silk"
+              />
+            </div>
+
+            <div>
+              <label className="seller-label" htmlFor="designType">Design Type</label>
+              <input
+                id="designType"
+                name="designType"
+                value={formState.designType}
+                onChange={handleChange}
+                className="seller-input"
+                placeholder="Peacock Border"
+              />
             </div>
 
             <div>
               <label className="seller-label" htmlFor="price">Price</label>
-              <input id="price" name="price" value={formState.price} onChange={handleChange} className="seller-input" placeholder="48500" />
+              <input
+                id="price"
+                name="price"
+                value={formState.price}
+                onChange={handleChange}
+                className="seller-input"
+                placeholder="48500"
+              />
             </div>
 
             <div>
               <label className="seller-label" htmlFor="stock">Available Stock</label>
-              <input id="stock" name="stock" value={formState.stock} onChange={handleChange} className="seller-input" placeholder="4" />
+              <input
+                id="stock"
+                name="stock"
+                value={formState.stock}
+                onChange={handleChange}
+                className="seller-input"
+                placeholder="4"
+              />
+            </div>
+
+            <div className="sm:col-span-2">
+              <label className="seller-label">Customization Available</label>
+              <div className="mt-2 flex flex-wrap gap-3">
+                <label className="flex items-center gap-3 rounded-[14px] border border-[#e9d8ce] bg-white px-4 py-3 text-sm font-medium text-[#381c17]">
+                  <input
+                    type="radio"
+                    name="isCustomizationAvailable"
+                    value="true"
+                    checked={formState.isCustomizationAvailable === "true"}
+                    onChange={handleChange}
+                    className="accent-[#7a1e2c]"
+                  />
+                  Yes
+                </label>
+                <label className="flex items-center gap-3 rounded-[14px] border border-[#e9d8ce] bg-white px-4 py-3 text-sm font-medium text-[#381c17]">
+                  <input
+                    type="radio"
+                    name="isCustomizationAvailable"
+                    value="false"
+                    checked={formState.isCustomizationAvailable === "false"}
+                    onChange={handleChange}
+                    className="accent-[#7a1e2c]"
+                  />
+                  No
+                </label>
+              </div>
             </div>
 
             <div className="sm:col-span-2">
               <label className="seller-label" htmlFor="description">Description</label>
-              <textarea id="description" name="description" value={formState.description} onChange={handleChange} className="seller-textarea min-h-[120px]" placeholder="Write a short product description for the seller catalogue." />
+              <textarea
+                id="description"
+                name="description"
+                value={formState.description}
+                onChange={handleChange}
+                className="seller-textarea min-h-[120px]"
+                placeholder="Write a short product description for the seller catalogue."
+              />
             </div>
           </div>
 
@@ -144,7 +385,7 @@ const AddUpdateProduct = ({ open, mode = "add", product = null, products = [], o
                 </div>
                 <p className="mt-4 text-sm font-semibold text-[#381c17]">Upload up to 5 product images</p>
                 <p className="mt-2 max-w-[260px] text-sm leading-6 text-[#7a645b]">
-                  Keep this area for main image plus 4 gallery images when we connect the real add product API.
+                  Keep this area for main image plus 4 gallery images while the image upload API is still pending.
                 </p>
               </div>
             </div>
