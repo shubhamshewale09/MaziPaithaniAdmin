@@ -276,32 +276,29 @@ const Dashboard = () => {
           onMenuClick={toggleSidebar}
           activeTab={activeTab}
           showMenuButton={!shouldForceProfileCompletion}
-          showLogoutButton={shouldForceProfileCompletion}
+          showLogoutButton={false}
           onLogout={handleLogout}
         />
 
-        {!shouldForceProfileCompletion && (
-          <Sidebar
-            activeTab={activeTab}
-            setActiveTab={setActiveTab}
-            onLogout={handleLogout}
-            isCollapsed={isSidebarCollapsed}
-            isMobile={isMobile}
-            isOpen={isMobileSidebarOpen}
-            onClose={closeMobileSidebar}
-          />
-        )}
+        <Sidebar
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          onLogout={handleLogout}
+          isCollapsed={isSidebarCollapsed}
+          isMobile={isMobile}
+          isOpen={isMobileSidebarOpen}
+          onClose={closeMobileSidebar}
+          disableTabs={shouldForceProfileCompletion}
+        />
 
         <main
           className={[
             "relative min-h-screen overflow-x-hidden px-4 pb-8 pt-[94px] transition-all duration-300 ease-out sm:px-6 lg:px-8",
-            shouldForceProfileCompletion
+            isMobile
               ? "ml-0"
-              : isMobile
-                ? "ml-0"
-                : isSidebarCollapsed
-                  ? "lg:ml-[92px]"
-                  : "lg:ml-[280px]",
+              : isSidebarCollapsed
+                ? "lg:ml-[92px]"
+                : "lg:ml-[280px]",
           ].join(" ")}
         >
           <div className="absolute inset-x-0 top-[74px] -z-10 h-[320px] bg-[radial-gradient(circle_at_top_right,_rgba(201,162,39,0.18),_transparent_34%),radial-gradient(circle_at_top_left,_rgba(122,30,44,0.12),_transparent_30%)]" />

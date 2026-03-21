@@ -10,6 +10,7 @@ import {
   LogOut,
   X,
 } from "lucide-react";
+import { toast } from "react-toastify";
 
 const Sidebar = ({
   activeTab,
@@ -19,6 +20,7 @@ const Sidebar = ({
   isMobile,
   isOpen,
   onClose,
+  disableTabs = false,
 }) => {
   const menuItems = [
     { id: "dashboard", label: "Dashboard", icon: <LayoutDashboard size={18} /> },
@@ -31,6 +33,10 @@ const Sidebar = ({
   ];
 
   const handleTabClick = (tabId) => {
+    if (disableTabs && tabId !== "profile") {
+      toast.error("Please complete your profile first");
+      return;
+    }
     setActiveTab(tabId);
     if (isMobile) {
       onClose();
