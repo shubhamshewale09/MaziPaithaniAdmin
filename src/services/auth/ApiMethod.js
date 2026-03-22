@@ -118,3 +118,27 @@ export const getApiWithoutAuthorization = async (url) => {
     stopApiLoader();
   }
 };
+
+export const putApiWithAuthorization = async (url, data) => {
+  startApiLoader();
+  try {
+    const response = await axiosInstance.put(url, data);
+    return response.data;
+  } catch (error) {
+    handleAuthorizationError(error);
+  } finally {
+    stopApiLoader();
+  }
+};
+
+export const deleteApiWithAuthorization = async (url) => {
+  startApiLoader();
+  try {
+    const response = await axiosInstance.delete(url);
+    return response.data;
+  } catch (error) {
+    handleAuthorizationError(error);
+  } finally {
+    stopApiLoader();
+  }
+};

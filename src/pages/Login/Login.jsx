@@ -54,8 +54,12 @@ const Login = () => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+    const nextValue =
+      name === 'loginId' && /^\d*$/.test(value)
+        ? value.replace(/\D/g, '').slice(0, 10)
+        : value;
 
-    setForm((prev) => ({ ...prev, [name]: value }));
+    setForm((prev) => ({ ...prev, [name]: nextValue }));
     setErrors((prev) => ({ ...prev, [name]: '' }));
   };
 
@@ -196,6 +200,8 @@ const Login = () => {
                     name='loginId'
                     value={form.loginId}
                     onChange={handleChange}
+                    maxLength={isMobileInput ? 10 : undefined}
+                    inputMode={isMobileInput ? 'numeric' : 'email'}
                     className={`w-full pt-6 pb-2 px-4 rounded-xl text-sm font-semibold outline-none ${
                       errors.loginId
                         ? 'ring-2 ring-red-400'

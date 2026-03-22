@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   ChevronLeft,
   ChevronRight,
@@ -10,8 +10,10 @@ import {
   Search,
   Sparkles,
   Trash2,
+  X,
 } from "lucide-react";
 import ConfirmationModal from "../../components/custom/ConfirmationModal";
+import Loader from "../../components/custom/Loader";
 import MetaTitle from "../../components/custom/MetaTitle";
 import { sellerProducts } from "../../data/sellerStaticData";
 import AddUpdateProduct from "./AddUpdateProduct";
@@ -24,22 +26,18 @@ import {
   SellerSectionCard,
   SellerStatCard,
 } from "../../components/seller/SellerUI";
-import { SaveProductDetails } from "../../services/Product/ProductApi";
+import {
+  GetProductCategories,
+  DeleteProductDetails,
+  GetAllProductData,
+  SaveProductDetails,
+  UpdateProductDetails,
+  UpdateProductImage,
+  UploadProductImages,
+} from "../../services/Product/ProductApi";
 import { showApiError, showApiSuccess } from "../../Utils/Utils";
 
 const formatCurrency = (value) => `Rs ${value.toLocaleString("en-IN")}`;
-
-const normalizeInitialProducts = (products) =>
-  products.map((product) => ({
-    ...product,
-    iProductId: product.iProductId ?? Number(product.id?.replace(/[^0-9]/g, "")) ?? null,
-    iCategoryId: product.iCategoryId ?? null,
-    color: product.color || product.palette || "",
-    fabric: product.fabric || "",
-    designType: product.designType || "",
-    isCustomizationAvailable: product.isCustomizationAvailable || false,
-    description: product.description || product.weave || "",
-  }));
 
 const getLoginData = () => {
   try {
@@ -59,6 +57,16 @@ const getSellerIdFromLogin = () => {
   );
 };
 
+const getUserIdFromLogin = () => {
+  const loginData = getLoginData();
+  return (
+    loginData?.userId ??
+    loginData?.UserId ??
+    localStorage.getItem("UserId") ??
+    null
+  );
+};
+
 const getResponseMessage = (response) =>
   response?.message ||
   response?.responseData?.message ||
@@ -66,19 +74,220 @@ const getResponseMessage = (response) =>
   "";
 
 const getResponseProductId = (response, fallbackProductId) =>
+  response?.productId ??
+  response?.data?.productId ??
+  response?.responseData?.productId ??
   response?.data?.iProductId ??
   response?.responseData?.iProductId ??
   response?.iProductId ??
   fallbackProductId;
 
+const getFirstArray = (value) => {
+  if (Array.isArray(value)) {
+    return value;
+  }
+
+  if (value && typeof value === "object") {
+    for (const nestedValue of Object.values(value)) {
+      if (Array.isArray(nestedValue)) {
+        return nestedValue;
+      }
+    }
+  }
+
+  return [];
+};
+
+const normalizeImageUrl = (value) => {
+  if (!value || typeof value !== "string") {
+    return value;
+  }
+
+  return value.replace(
+    "http://majhipaithani-api.onrender.com/",
+    "https://majhipaithani-api.onrender.com/"
+  );
+};
+
+const getProductImageList = (product) => {
+  const rawImages =
+    getFirstArray(product?.images) ||
+    getFirstArray(product?.productImages) ||
+    getFirstArray(product?.Files) ||
+    [];
+
+  const mappedImages = rawImages
+    .map((image, index) => {
+      const src =
+        image?.src ??
+        image?.sImageUrl ??
+        image?.sImagePath ??
+        image?.imagePath ??
+        image?.sFilePath ??
+        image?.filePath ??
+        image?.url ??
+        image?.ImageUrl;
+
+      if (!src) {
+        return null;
+      }
+
+      return {
+        imageId:
+          image?.imageId ??
+          image?.iImageId ??
+          image?.ImageId ??
+          image?.id ??
+          null,
+        label:
+          image?.label ||
+          image?.sImageTitle ||
+          (image?.bIsPrimary ? "Main Image" : `Gallery ${index + 1}`),
+        src: normalizeImageUrl(src),
+      };
+    })
+    .filter(Boolean);
+
+  return mappedImages.length > 0
+    ? mappedImages
+    : [
+        { label: "Front View", src: sellerProducts[0].images[0].src },
+        { label: "Pallu Detail", src: sellerProducts[0].images[1].src },
+        { label: "Border Closeup", src: sellerProducts[0].images[2].src },
+      ];
+};
+
+const normalizeApiProducts = (response, categoryMap = {}) => {
+  const rawProducts =
+    getFirstArray(response?.data) ||
+    getFirstArray(response?.responseData) ||
+    getFirstArray(response);
+
+  return rawProducts
+    .filter((product) => product?.bIsDeleted !== true)
+    .map((product, index) => {
+    const productId =
+      product?.iProductId ??
+      product?.productId ??
+      product?.ProductId ??
+      product?.id ??
+      index + 1;
+
+    const price = Number(
+      product?.dcBasePrice ?? product?.price ?? product?.basePrice ?? 0
+    );
+    const stock = Number(product?.iStock ?? product?.stock ?? 0);
+    const color = product?.sColor ?? product?.color ?? product?.palette ?? "";
+    const description =
+      product?.sDescription ?? product?.description ?? product?.weave ?? "";
+
+    return {
+      id: `PRD-${productId}`,
+      iProductId: Number(productId) || productId,
+      iCategoryId:
+        product?.iCategoryId ?? product?.categoryId ?? product?.CategoryId ?? null,
+      name:
+        product?.sProductTitle ?? product?.productName ?? product?.name ?? "Untitled Paithani",
+      category:
+        product?.sCategoryName ??
+        product?.category ??
+        product?.categoryName ??
+        categoryMap[product?.iCategoryId ?? product?.categoryId ?? product?.CategoryId] ??
+        "Category",
+      stock,
+      price,
+      color,
+      palette: color || "Custom palette",
+      fabric: product?.sFabric ?? product?.fabric ?? "",
+      designType: product?.sDesignType ?? product?.designType ?? "",
+      weave: description || "Seller-added product description will appear here.",
+      description:
+        description || "Seller-added product description will appear here.",
+      isCustomizationAvailable:
+        product?.bIsCustomizationAvailable ??
+        product?.isCustomizationAvailable ??
+        false,
+      status:
+        product?.bIsActive === false
+          ? "Inactive"
+          : stock > 0
+          ? "Active"
+          : "Out of Stock",
+      images: getProductImageList(product),
+    };
+    })
+    .filter((product) => product.iProductId && product.status !== undefined);
+};
+
 const ProductList = () => {
-  const [products, setProducts] = useState(normalizeInitialProducts(sellerProducts));
+  const [products, setProducts] = useState([]);
+  const [isLoadingProducts, setIsLoadingProducts] = useState(true);
   const [query, setQuery] = useState("");
   const [activeImages, setActiveImages] = useState({});
   const [pendingDelete, setPendingDelete] = useState(null);
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [productModalMode, setProductModalMode] = useState("add");
   const [selectedProduct, setSelectedProduct] = useState(null);
+  const [imageViewer, setImageViewer] = useState(null);
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      const userId = getUserIdFromLogin();
+
+      if (!userId) {
+        setIsLoadingProducts(false);
+        showApiError("User ID is not available in the login response.");
+        return;
+      }
+
+      try {
+        setIsLoadingProducts(true);
+        const [response, categoryResponse] = await Promise.all([
+          GetAllProductData(userId),
+          GetProductCategories(),
+        ]);
+
+        const categoryOptions = getFirstArray(categoryResponse?.data) ||
+          getFirstArray(categoryResponse?.responseData) ||
+          getFirstArray(categoryResponse);
+
+        const categoryMap = categoryOptions.reduce((accumulator, item) => {
+          const categoryId =
+            item?.iCategoryId ??
+            item?.categoryId ??
+            item?.value ??
+            item?.id ??
+            item?.KeyId ??
+            item?.iId;
+          const categoryLabel =
+            item?.sCategoryName ??
+            item?.categoryName ??
+            item?.sName ??
+            item?.name ??
+            item?.label ??
+            item?.Value;
+
+          if (categoryId !== undefined && categoryId !== null && categoryLabel) {
+            accumulator[categoryId] = String(categoryLabel);
+          }
+
+          return accumulator;
+        }, {});
+
+        setProducts(normalizeApiProducts(response, categoryMap));
+      } catch (error) {
+        showApiError(
+          error?.response?.data || {
+            message: "Unable to load product list right now.",
+          }
+        );
+      } finally {
+        setIsLoadingProducts(false);
+      }
+    };
+
+    fetchProducts();
+  }, []);
 
   const filteredProducts = useMemo(
     () =>
@@ -125,6 +334,42 @@ const ProductList = () => {
     setProductModalMode("add");
   };
 
+  const openImageViewer = (product, imageIndex) => {
+    setImageViewer({
+      productName: product.name,
+      images: product.images,
+      activeIndex: imageIndex,
+    });
+  };
+
+  const changeViewerImage = (direction) => {
+    setImageViewer((current) => {
+      if (!current?.images?.length) {
+        return current;
+      }
+
+      const nextIndex =
+        (current.activeIndex + direction + current.images.length) %
+        current.images.length;
+
+      return {
+        ...current,
+        activeIndex: nextIndex,
+      };
+    });
+  };
+
+  const selectViewerImage = (index) => {
+    setImageViewer((current) =>
+      current
+        ? {
+            ...current,
+            activeIndex: index,
+          }
+        : current
+    );
+  };
+
   const handleSaveProduct = async (nextProduct, mode) => {
     const sellerId = getSellerIdFromLogin();
 
@@ -138,12 +383,8 @@ const ProductList = () => {
       return;
     }
 
-    const taskid = mode === "edit" ? 2 : 1;
-
     const payload = {
-      requestedFor: 4,
-      taskid,
-      iProductId: taskid === 1 ? null : nextProduct.iProductId,
+      iProductId: mode === "edit" ? nextProduct.iProductId : null,
       iSellerId: sellerId,
       iCategoryId: nextProduct.iCategoryId,
       sProductTitle: nextProduct.name,
@@ -156,75 +397,123 @@ const ProductList = () => {
       iStock: Number(nextProduct.stock) || 0,
     };
 
-    if (taskid === 2 && !payload.iProductId) {
+    if (mode === "edit" && !payload.iProductId) {
       showApiError("Product ID is required to update this item.");
       return;
     }
 
     try {
-      const response = await SaveProductDetails(payload);
+      const response =
+        mode === "edit"
+          ? await UpdateProductDetails(payload)
+          : await SaveProductDetails({
+              requestedFor: 4,
+              taskid: 1,
+              ...payload,
+            });
       const savedProduct = {
         ...nextProduct,
         iProductId: getResponseProductId(response, nextProduct.iProductId),
       };
 
       setProducts((current) => {
+        const existingProduct = current.find((product) => product.id === savedProduct.id);
+        const productWithImages = {
+          ...savedProduct,
+          images: savedProduct.images?.length > 0
+            ? savedProduct.images
+            : existingProduct?.images || [],
+        };
         const exists = current.some((product) => product.id === savedProduct.id);
         return exists
           ? current.map((product) =>
-              product.id === savedProduct.id ? savedProduct : product
+              product.id === savedProduct.id ? productWithImages : product
             )
-          : [savedProduct, ...current];
+          : [productWithImages, ...current];
       });
 
       showApiSuccess(
         getResponseMessage(response) ||
-          (taskid === 1 ? "Product added successfully." : "Product updated successfully.")
+          (mode === "edit"
+            ? "Product updated successfully."
+            : "Product added successfully.")
       );
-      closeProductModal();
+      return savedProduct;
     } catch (error) {
       showApiError(
         error?.response?.data || {
           message:
-            taskid === 1
-              ? "Unable to add product right now."
-              : "Unable to update product right now.",
+            mode === "edit"
+              ? "Unable to update product right now."
+              : "Unable to add product right now.",
         }
       );
+      return null;
+    }
+  };
+
+  const handleUploadProductImages = async (productId, files) => {
+    const userId = getUserIdFromLogin();
+
+    if (!productId) {
+      showApiError("Please save product details first.");
+      return false;
+    }
+
+    if (!userId) {
+      showApiError("User ID is not available in the login response.");
+      return false;
+    }
+
+    if (!files?.length) {
+      showApiError("Please select at least one image.");
+      return false;
+    }
+
+    try {
+      const response = await UploadProductImages({
+        ProductId: productId,
+        userId,
+        Files: files,
+      });
+
+      setProducts((current) =>
+        current.map((product) =>
+          product.iProductId === productId
+            ? {
+                ...product,
+                images: files.map((file, index) => ({
+                  label: index === 0 ? "Main Image" : `Gallery ${index + 1}`,
+                  src: URL.createObjectURL(file),
+                })),
+              }
+            : product
+        )
+      );
+
+      showApiSuccess(
+        getResponseMessage(response) || "Product images uploaded successfully."
+      );
+      closeProductModal();
+      return true;
+    } catch (error) {
+      showApiError(
+        error?.response?.data || {
+          message: "Unable to upload product images right now.",
+        }
+      );
+      return false;
     }
   };
 
   const handleDeleteProduct = async (product) => {
-    const sellerId = getSellerIdFromLogin();
-
-    if (!sellerId) {
-      showApiError("Seller ID is not available in the login response.");
-      return;
-    }
-
     if (!product?.iProductId) {
       showApiError("Product ID is required to delete this item.");
       return;
     }
 
-    const payload = {
-      requestedFor: 4,
-      taskid: 3,
-      iProductId: product.iProductId,
-      iSellerId: sellerId,
-      iCategoryId: product.iCategoryId || 0,
-      sProductTitle: product.name || "",
-      sDescription: product.description || product.weave || "",
-      dcBasePrice: Number(product.price) || 0,
-      sColor: product.color || product.palette || "",
-      sFabric: product.fabric || "",
-      sDesignType: product.designType || "",
-      bIsCustomizationAvailable: !!product.isCustomizationAvailable,
-      iStock: Number(product.stock) || 0,
-    };
-
     try {
-      const response = await SaveProductDetails(payload);
+      const response = await DeleteProductDetails(product.iProductId);
       setProducts((current) =>
         current.filter((item) => item.id !== product.id)
       );
@@ -238,6 +527,62 @@ const ProductList = () => {
           message: "Unable to delete product right now.",
         }
       );
+    }
+  };
+
+  const handleUpdateSingleProductImage = async (productId, imageId, file, slotIndex) => {
+    if (!productId) {
+      showApiError("Product ID is required to update this image.");
+      return false;
+    }
+
+    if (!imageId) {
+      showApiError("Image ID is not available for this image.");
+      return false;
+    }
+
+    if (!file) {
+      showApiError("Please select an image first.");
+      return false;
+    }
+
+    try {
+      const response = await UpdateProductImage({
+        imageId,
+        file,
+      });
+
+      const previewUrl = URL.createObjectURL(file);
+
+      setProducts((current) =>
+        current.map((product) =>
+          product.iProductId === productId
+            ? {
+                ...product,
+                images: product.images.map((image, index) =>
+                  index === slotIndex
+                    ? {
+                        ...image,
+                        src: previewUrl,
+                      }
+                    : image
+                ),
+              }
+            : product
+        )
+      );
+
+      showApiSuccess(
+        getResponseMessage(response) || "Product image updated successfully."
+      );
+      return true;
+    } catch (error) {
+      showApiError(
+        error?.response?.data || {
+          message: "Unable to update product image right now.",
+        }
+      );
+      return false;
     }
   };
 
@@ -282,6 +627,7 @@ const ProductList = () => {
           </SellerButton>,
         ]}
       >
+        {isLoadingProducts ? <Loader /> : null}
         <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <SellerStatCard
             icon={<Package size={20} />}
@@ -381,11 +727,18 @@ const ProductList = () => {
                       </div>
 
                       <div className="relative mt-4 overflow-hidden rounded-[24px] border border-[#eadad2] bg-white shadow-[0_12px_35px_rgba(94,35,23,0.08)]">
-                        <img
-                          src={currentImage.src}
-                          alt={`${product.name} - ${currentImage.label}`}
-                          className="h-[240px] w-full object-cover sm:h-[270px]"
-                        />
+                        <button
+                          type="button"
+                          onClick={() => openImageViewer(product, imageIndex)}
+                          className="block w-full"
+                          aria-label={`View ${currentImage.label} for ${product.name}`}
+                        >
+                          <img
+                            src={currentImage.src}
+                            alt={`${product.name} - ${currentImage.label}`}
+                            className="h-[240px] w-full object-cover transition duration-200 hover:scale-[1.02] sm:h-[270px]"
+                          />
+                        </button>
 
                         <button
                           type="button"
@@ -458,6 +811,14 @@ const ProductList = () => {
                         </div>
                         <div className="seller-soft-panel rounded-2xl px-4 py-3">
                           <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#a27c68]">
+                            Customizable
+                          </p>
+                          <p className="mt-1 font-semibold text-[#351915]">
+                            {product.isCustomizationAvailable ? "Yes" : "No"}
+                          </p>
+                        </div>
+                        <div className="seller-soft-panel rounded-2xl px-4 py-3 sm:col-span-2">
+                          <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#a27c68]">
                             Available Stock
                           </p>
                           <p className="mt-1 font-semibold text-[#351915]">
@@ -517,6 +878,8 @@ const ProductList = () => {
         products={products}
         onClose={closeProductModal}
         onSaveProduct={handleSaveProduct}
+        onUploadImages={handleUploadProductImages}
+        onUpdateImage={handleUpdateSingleProductImage}
       />
 
       <ConfirmationModal
@@ -532,6 +895,81 @@ const ProductList = () => {
         onConfirm={confirmDelete}
         onClose={() => setPendingDelete(null)}
       />
+
+      {imageViewer ? (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-[#2d140f]/80 px-4 py-8 backdrop-blur-[4px]">
+          <div className="relative w-full max-w-5xl overflow-hidden rounded-[24px] border border-[#ead8cf] bg-[#fffaf6] shadow-[0_30px_80px_rgba(45,20,15,0.22)]">
+            <button
+              type="button"
+              onClick={() => setImageViewer(null)}
+              className="absolute right-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-[#7a1e2c] shadow-sm transition hover:bg-white"
+              aria-label="Close image preview"
+            >
+              <X size={18} />
+            </button>
+
+            <div className="bg-[#f8ede7] p-4 sm:p-6">
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#a27c68]">
+                Image Preview
+              </p>
+              <h3 className="mt-2 text-xl font-bold text-[#381c17]">
+                {imageViewer.productName}
+              </h3>
+              <p className="mt-1 text-sm text-[#7a645b]">
+                {imageViewer.images[imageViewer.activeIndex]?.label}
+              </p>
+            </div>
+
+            <div className="relative bg-white p-4 sm:p-6">
+              <img
+                src={imageViewer.images[imageViewer.activeIndex]?.src}
+                alt={`${imageViewer.productName} - ${imageViewer.images[imageViewer.activeIndex]?.label}`}
+                className="max-h-[80vh] w-full rounded-[20px] object-contain"
+              />
+
+              {imageViewer.images.length > 1 ? (
+                <button
+                  type="button"
+                  onClick={() => changeViewerImage(-1)}
+                  className="absolute left-6 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-[#7a1e2c] shadow-md transition hover:bg-white"
+                  aria-label="Previous full size image"
+                >
+                  <ChevronLeft size={18} />
+                </button>
+              ) : null}
+
+              {imageViewer.images.length > 1 ? (
+                <button
+                  type="button"
+                  onClick={() => changeViewerImage(1)}
+                  className="absolute right-6 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-[#7a1e2c] shadow-md transition hover:bg-white"
+                  aria-label="Next full size image"
+                >
+                  <ChevronRight size={18} />
+                </button>
+              ) : null}
+            </div>
+
+            {imageViewer.images.length > 1 ? (
+              <div className="flex items-center justify-center gap-2 border-t border-[#f1dfd7] bg-[#fffaf6] px-4 py-4">
+                {imageViewer.images.map((image, index) => (
+                  <button
+                    key={`${image.label}-${index}`}
+                    type="button"
+                    onClick={() => selectViewerImage(index)}
+                    className={`h-2.5 rounded-full transition-all ${
+                      index === imageViewer.activeIndex
+                        ? "w-8 bg-[#7a1e2c]"
+                        : "w-2.5 bg-[#d7b6aa]"
+                    }`}
+                    aria-label={`Show ${image.label} in full size`}
+                  />
+                ))}
+              </div>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
     </>
   );
 };
