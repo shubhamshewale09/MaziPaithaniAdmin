@@ -109,7 +109,7 @@ export const UploadProductImages = async (params) => {
 
   logFormDataEntries("UploadProductImages form-data", formData);
 
-  const response = await fetch(`${Base_Url}api/Product/api/upload/images`, {
+  const response = await fetch(`${Base_Url}api/Product/api/uploadimage`, {
     method: "POST",
     headers: getAuthorizedMultipartHeaders(),
     body: formData,
