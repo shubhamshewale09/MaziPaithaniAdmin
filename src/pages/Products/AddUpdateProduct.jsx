@@ -113,23 +113,23 @@ const createProductId = (products) => {
 };
 
 const getFirstArray = (value) => {
-  if (Array.isArray(value)) {
+  if (Array.isArray(value) && value.length > 0) {
     return value;
   }
 
-  if (value && typeof value === "object") {
+  if (value && typeof value === "object" && !Array.isArray(value)) {
     for (const nestedValue of Object.values(value)) {
-      if (Array.isArray(nestedValue)) {
+      if (Array.isArray(nestedValue) && nestedValue.length > 0) {
         return nestedValue;
       }
     }
   }
 
-  return [];
+  return null;
 };
 
 const normalizeCategoryOptions = (response) => {
-  const rawList = getFirstArray(response?.data) || getFirstArray(response?.responseData) || getFirstArray(response);
+  const rawList = getFirstArray(response?.data) ?? getFirstArray(response?.responseData) ?? getFirstArray(response?.categories) ?? getFirstArray(response) ?? [];
 
   return rawList
     .map((item, index) => {
@@ -416,7 +416,8 @@ const AddUpdateProduct = ({
         savedProduct?.iProductId,
         targetImage?.imageId,
         targetFile,
-        index
+        index,
+        targetImage?.src
       );
 
       if (isSuccess) {
@@ -689,7 +690,7 @@ const AddUpdateProduct = ({
                               type="file"
                               accept="image/*"
                               onChange={(event) => handleSingleImageSelection(event, index)}
-                              className="block w-full text-[10px] text-[#6f5a53] file:mr-2 file:rounded-[10px] file:border-0 file:bg-[#f3dfd6] file:px-3 file:py-1.5 file:font-semibold file:text-[#7a1e2c]"
+                              className="block w-full cursor-pointer text-[10px] text-[#6f5a53] file:mr-2 file:cursor-pointer file:rounded-[10px] file:border-0 file:bg-[#f3dfd6] file:px-3 file:py-1.5 file:font-semibold file:text-[#7a1e2c]"
                             />
                             <SellerButton
                               type="button"
@@ -723,17 +724,15 @@ const AddUpdateProduct = ({
           )}
 
           <div className="lg:col-span-2 flex flex-col gap-3 border-t border-[#f1dfd7] pt-2 sm:flex-row sm:justify-end">
-            <SellerButton
-              type="submit"
-              disabled={isSavingProduct}
-              className="min-h-[38px] rounded-[12px] px-4 text-sm sm:w-auto"
-            >
-              {isSavingProduct
-                ? "Saving..."
-                : mode === "edit"
-                ? "Save Product Details"
-                : "Save Product Details"}
-            </SellerButton>
+            {!savedProduct?.iProductId || mode === "edit" ? (
+              <SellerButton
+                type="submit"
+                disabled={isSavingProduct}
+                className="min-h-[38px] rounded-[12px] px-4 text-sm sm:w-auto"
+              >
+                {isSavingProduct ? "Saving..." : "Save Product Details"}
+              </SellerButton>
+            ) : null}
             {canUploadImages && mode !== "edit" ? (
               <SellerButton
                 type="button"

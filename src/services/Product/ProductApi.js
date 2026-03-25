@@ -100,7 +100,7 @@ const logFormDataEntries = (label, formData) => {
 export const UploadProductImages = async (params) => {
   const formData = new FormData();
 
-  formData.append("ProdcutId", String(params.ProductId));
+  // userId goes in FormData body — NOT in query params
   formData.append("userId", String(params.userId));
 
   params.Files.forEach((file) => {
@@ -109,7 +109,10 @@ export const UploadProductImages = async (params) => {
 
   logFormDataEntries("UploadProductImages form-data", formData);
 
-  const response = await fetch(`${Base_Url}api/Product/api/uploadimage`, {
+  // ProdcutId (note: typo is intentional per API spec) and imageId go as query params
+  const url = `${Base_Url}api/Product/api/uploadimage?ProdcutId=${encodeURIComponent(params.ProductId)}&Taskid=0&imageId=0`;
+
+  const response = await fetch(url, {
     method: "POST",
     headers: getAuthorizedMultipartHeaders(),
     body: formData,
@@ -124,23 +127,29 @@ export const UploadProductImages = async (params) => {
   return data;
 };
 
+const extractImagePath = (url) => {
+  try {
+    return new URL(url).pathname;
+  } catch {
+    return url;
+  }
+};
+
 export const UpdateProductImage = async (params) => {
   const formData = new FormData();
 
-  formData.append("fileUrl", params.file, params.file?.name || "product-image.jpg");
+  formData.append("userId", "0");
+  formData.append("Files", params.file, params.file?.name || "product-image.jpg");
 
   logFormDataEntries("UpdateProductImage form-data", formData);
 
-  const response = await fetch(
-    `${Base_Url}api/Product/updateproductimage?imageId=${encodeURIComponent(
-      params.imageId
-    )}`,
-    {
-      method: "PUT",
-      headers: getAuthorizedMultipartHeaders(),
-      body: formData,
-    }
-  );
+  const url = `${Base_Url}api/Product/api/uploadimage?ProdcutId=0&Taskid=1&imageId=${encodeURIComponent(params.imageId)}&fileUrl=${encodeURIComponent(extractImagePath(params.fileUrl || ""))}`;
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: getAuthorizedMultipartHeaders(),
+    body: formData,
+  });
 
   const data = await response.json().catch(() => ({}));
 

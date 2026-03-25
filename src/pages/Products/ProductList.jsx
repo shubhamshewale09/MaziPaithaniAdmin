@@ -83,19 +83,19 @@ const getResponseProductId = (response, fallbackProductId) =>
   fallbackProductId;
 
 const getFirstArray = (value) => {
-  if (Array.isArray(value)) {
+  if (Array.isArray(value) && value.length > 0) {
     return value;
   }
 
-  if (value && typeof value === "object") {
+  if (value && typeof value === "object" && !Array.isArray(value)) {
     for (const nestedValue of Object.values(value)) {
-      if (Array.isArray(nestedValue)) {
+      if (Array.isArray(nestedValue) && nestedValue.length > 0) {
         return nestedValue;
       }
     }
   }
 
-  return [];
+  return null;
 };
 
 const normalizeImageUrl = (value) => {
@@ -111,9 +111,9 @@ const normalizeImageUrl = (value) => {
 
 const getProductImageList = (product) => {
   const rawImages =
-    getFirstArray(product?.images) ||
-    getFirstArray(product?.productImages) ||
-    getFirstArray(product?.Files) ||
+    getFirstArray(product?.images) ??
+    getFirstArray(product?.productImages) ??
+    getFirstArray(product?.Files) ??
     [];
 
   const mappedImages = rawImages
@@ -159,9 +159,11 @@ const getProductImageList = (product) => {
 
 const normalizeApiProducts = (response, categoryMap = {}) => {
   const rawProducts =
-    getFirstArray(response?.data) ||
-    getFirstArray(response?.responseData) ||
-    getFirstArray(response);
+    getFirstArray(response?.data) ??
+    getFirstArray(response?.responseData) ??
+    getFirstArray(response?.products) ??
+    getFirstArray(response) ??
+    [];
 
   return rawProducts
     .filter((product) => product?.bIsDeleted !== true)
@@ -232,13 +234,7 @@ const ProductList = () => {
 
   useEffect(() => {
     const fetchProducts = async () => {
-      const userId = getUserIdFromLogin();
-
-      if (!userId) {
-        setIsLoadingProducts(false);
-        showApiError("User ID is not available in the login response.");
-        return;
-      }
+      const userId = getUserIdFromLogin() ?? "0";
 
       try {
         setIsLoadingProducts(true);
@@ -247,9 +243,11 @@ const ProductList = () => {
           GetProductCategories(),
         ]);
 
-        const categoryOptions = getFirstArray(categoryResponse?.data) ||
-          getFirstArray(categoryResponse?.responseData) ||
-          getFirstArray(categoryResponse);
+        const categoryOptions = getFirstArray(categoryResponse?.data) ??
+          getFirstArray(categoryResponse?.responseData) ??
+          getFirstArray(categoryResponse?.categories) ??
+          getFirstArray(categoryResponse) ??
+          [];
 
         const categoryMap = categoryOptions.reduce((accumulator, item) => {
           const categoryId =
@@ -530,7 +528,7 @@ const ProductList = () => {
     }
   };
 
-  const handleUpdateSingleProductImage = async (productId, imageId, file, slotIndex) => {
+  const handleUpdateSingleProductImage = async (productId, imageId, file, slotIndex, fileUrl) => {
     if (!productId) {
       showApiError("Product ID is required to update this image.");
       return false;
@@ -550,6 +548,7 @@ const ProductList = () => {
       const response = await UpdateProductImage({
         imageId,
         file,
+        fileUrl,
       });
 
       const previewUrl = URL.createObjectURL(file);
