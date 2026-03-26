@@ -1,10 +1,10 @@
-import { Base_Url } from "../../BaseURL/BaseUrl";
+import { Base_Url } from '../../BaseURL/BaseUrl';
 import {
   deleteApiWithAuthorization,
   getApiWithAuthorization,
   postApiWithAuthorization,
   putApiWithAuthorization,
-} from "../auth/ApiMethod";
+} from '../auth/ApiMethod';
 
 let productCategoriesCache = null;
 let productCategoriesRequest = null;
@@ -19,7 +19,7 @@ export const GetProductCategories = async () => {
   }
 
   productCategoriesRequest = getApiWithAuthorization(
-    `${Base_Url}api/Dropdown?taskId=2`
+    `${Base_Url}api/Dropdown?taskId=2`,
   )
     .then((res) => {
       productCategoriesCache = res;
@@ -35,14 +35,14 @@ export const GetProductCategories = async () => {
 export const SaveProductDetails = async (params) => {
   const res = await postApiWithAuthorization(
     `${Base_Url}api/savedata/AddProductdeatils`,
-    params
+    params,
   );
   return res;
 };
 
 export const GetAllProductData = async (userId) => {
   const res = await getApiWithAuthorization(
-    `${Base_Url}api/Product/GetAllProductdata?userId=${userId}`
+    `${Base_Url}api/Product/GetAllProductdata?userId=${userId}`,
   );
   return res;
 };
@@ -50,16 +50,16 @@ export const GetAllProductData = async (userId) => {
 export const UpdateProductDetails = async (params) => {
   const res = await putApiWithAuthorization(
     `${Base_Url}api/savedata/UpdateProductdeatils`,
-    params
+    params,
   );
   return res;
 };
 
 const getAuthorizedMultipartHeaders = () => {
-  const loginData = JSON.parse(localStorage.getItem("login") || "{}");
-  const userId = localStorage.getItem("UserId") || loginData?.userId || "";
-  const roleId = localStorage.getItem("RoleId") || loginData?.roleId || "";
-  const token = loginData?.token || "";
+  const loginData = JSON.parse(localStorage.getItem('login') || '{}');
+  const userId = localStorage.getItem('UserId') || loginData?.userId || '';
+  const roleId = localStorage.getItem('RoleId') || loginData?.roleId || '';
+  const token = loginData?.token || '';
   const headers = {};
 
   if (token) {
@@ -100,17 +100,20 @@ const logFormDataEntries = (label, formData) => {
 export const UploadProductImages = async (params) => {
   const formData = new FormData();
 
-  formData.append("ProdcutId", String(params.ProductId));
-  formData.append("userId", String(params.userId));
+  // userId goes in FormData body — NOT in query params
+  formData.append('userId', String(params.userId));
 
   params.Files.forEach((file) => {
-    formData.append("Files", file, file?.name || "product-image.jpg");
+    formData.append('Files', file, file?.name || 'product-image.jpg');
   });
 
-  logFormDataEntries("UploadProductImages form-data", formData);
+  logFormDataEntries('UploadProductImages form-data', formData);
 
-  const response = await fetch(`${Base_Url}api/Product/api/upload/images`, {
-    method: "POST",
+  // ProdcutId (note: typo is intentional per API spec) and imageId go as query params
+  const url = `${Base_Url}api/Product/api/uploadimage?ProdcutId=${encodeURIComponent(params.ProductId)}&Taskid=0&imageId=0`;
+
+  const response = await fetch(url, {
+    method: 'POST',
     headers: getAuthorizedMultipartHeaders(),
     body: formData,
   });
@@ -124,23 +127,33 @@ export const UploadProductImages = async (params) => {
   return data;
 };
 
+const extractImagePath = (url) => {
+  try {
+    return new URL(url).pathname;
+  } catch {
+    return url;
+  }
+};
+
 export const UpdateProductImage = async (params) => {
   const formData = new FormData();
 
-  formData.append("fileUrl", params.file, params.file?.name || "product-image.jpg");
-
-  logFormDataEntries("UpdateProductImage form-data", formData);
-
-  const response = await fetch(
-    `${Base_Url}api/Product/updateproductimage?imageId=${encodeURIComponent(
-      params.imageId
-    )}`,
-    {
-      method: "PUT",
-      headers: getAuthorizedMultipartHeaders(),
-      body: formData,
-    }
+  formData.append('userId', '0');
+  formData.append(
+    'Files',
+    params.file,
+    params.file?.name || 'product-image.jpg',
   );
+
+  logFormDataEntries('UpdateProductImage form-data', formData);
+
+  const url = `${Base_Url}api/Product/api/uploadimage?ProdcutId=0&Taskid=1&imageId=${encodeURIComponent(params.imageId)}&fileUrl=${encodeURIComponent(extractImagePath(params.fileUrl || ''))}`;
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: getAuthorizedMultipartHeaders(),
+    body: formData,
+  });
 
   const data = await response.json().catch(() => ({}));
 
@@ -153,7 +166,7 @@ export const UpdateProductImage = async (params) => {
 
 export const DeleteProductDetails = async (productId) => {
   const res = await deleteApiWithAuthorization(
-    `${Base_Url}api/savedata/DeleteProductdeatils/${productId}`
+    `${Base_Url}api/savedata/DeleteProductdeatils/${productId}`,
   );
   return res;
 };
