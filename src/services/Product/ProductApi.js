@@ -101,7 +101,7 @@ export const UploadProductImages = async (params) => {
   const formData = new FormData();
 
   // userId goes in FormData body — NOT in query params
-  formData.append('userId', String(params.userId));
+  formData.append("userId", String(params.userId));
 
   params.Files.forEach((file) => {
     formData.append('Files', file, file?.name || 'product-image.jpg');
@@ -113,7 +113,7 @@ export const UploadProductImages = async (params) => {
   const url = `${Base_Url}api/Product/api/uploadimage?ProdcutId=${encodeURIComponent(params.ProductId)}&Taskid=0&imageId=0`;
 
   const response = await fetch(url, {
-    method: 'POST',
+    method: "POST",
     headers: getAuthorizedMultipartHeaders(),
     body: formData,
   });
@@ -121,7 +121,9 @@ export const UploadProductImages = async (params) => {
   const data = await response.json().catch(() => ({}));
 
   if (!response.ok) {
-    throw { response: { data, status: response.status } };
+    const error = new Error(data?.message || "Request failed");
+    error.response = { data, status: response.status };
+    throw error;
   }
 
   return data;
@@ -138,13 +140,10 @@ const extractImagePath = (url) => {
 export const UpdateProductImage = async (params) => {
   const formData = new FormData();
 
-  formData.append('userId', '0');
-  formData.append(
-    'Files',
-    params.file,
-    params.file?.name || 'product-image.jpg',
-  );
+  formData.append("userId", "0");
+  formData.append("Files", params.file, params.file?.name || "product-image.jpg");
 
+  
   logFormDataEntries('UpdateProductImage form-data', formData);
 
   const url = `${Base_Url}api/Product/api/uploadimage?ProdcutId=0&Taskid=1&imageId=${encodeURIComponent(params.imageId)}&fileUrl=${encodeURIComponent(extractImagePath(params.fileUrl || ''))}`;
@@ -158,7 +157,9 @@ export const UpdateProductImage = async (params) => {
   const data = await response.json().catch(() => ({}));
 
   if (!response.ok) {
-    throw { response: { data, status: response.status } };
+    const error = new Error(data?.message || "Request failed");
+    error.response = { data, status: response.status };
+    throw error;
   }
 
   return data;
