@@ -211,8 +211,6 @@ const AddUpdateProduct = ({
   const [formState, setFormState] = useState(emptyForm);
   const [categoryOptions, setCategoryOptions] = useState([]);
   const [categoryLoading, setCategoryLoading] = useState(false);
-  const [selectedFiles, setSelectedFiles] = useState([]);
-  const [previewUrls, setPreviewUrls] = useState([]);
   const [singleImageFiles, setSingleImageFiles] = useState({});
   const [singleImagePreviews, setSingleImagePreviews] = useState({});
   const [savedProduct, setSavedProduct] = useState(null);
@@ -221,14 +219,11 @@ const AddUpdateProduct = ({
   const [isPreparingImages, setIsPreparingImages] = useState(false);
   const [updatingImageIndex, setUpdatingImageIndex] = useState(null);
   const hasFetchedCategoriesRef = useRef(false);
-  const fileInputRef = useRef(null);
 
   useEffect(() => {
     if (open) {
       setFormState(buildFormState(product));
       setSavedProduct(product);
-      setSelectedFiles([]);
-      setPreviewUrls([]);
       setSingleImageFiles({});
       setSingleImagePreviews({});
     }
@@ -236,10 +231,9 @@ const AddUpdateProduct = ({
 
   useEffect(() => {
     return () => {
-      previewUrls.forEach((url) => URL.revokeObjectURL(url));
       Object.values(singleImagePreviews).forEach((url) => URL.revokeObjectURL(url));
     };
-  }, [previewUrls, singleImagePreviews]);
+  }, [singleImagePreviews]);
 
   useEffect(() => {
     if (!open) {
@@ -328,45 +322,17 @@ const AddUpdateProduct = ({
     }
   };
 
-  const handleFileSelection = async (event) => {
-    const files = Array.from(event.target.files || []).slice(0, imageSlots.length);
-
-    if (!files.length) {
-      setSelectedFiles([]);
-      return;
-    }
-
-    setIsPreparingImages(true);
-
-    try {
-      const processedFiles = await Promise.all(
-        files.map((file) => compressImageFile(file))
-      );
-      previewUrls.forEach((url) => URL.revokeObjectURL(url));
-      setSelectedFiles(processedFiles);
-      setPreviewUrls(processedFiles.map((file) => URL.createObjectURL(file)));
-    } catch (error) {
-      setSelectedFiles([]);
-      setPreviewUrls([]);
-      showApiError(error?.message || "Unable to process selected images.");
-    } finally {
-      setIsPreparingImages(false);
-    }
-  };
-
-  const handleUploadSelectedImages = async () => {
+const handleUploadSelectedImages = async () => {
     const productId = savedProduct?.iProductId ?? formState.iProductId;
+    const files = imageSlots.map((_, index) => singleImageFiles[index]).filter(Boolean);
 
     setIsUploadingImages(true);
     try {
-      const isSuccess = await onUploadImages(productId, selectedFiles);
+      const isSuccess = await onUploadImages(productId, files);
       if (isSuccess) {
-        previewUrls.forEach((url) => URL.revokeObjectURL(url));
-        setSelectedFiles([]);
-        setPreviewUrls([]);
-        if (fileInputRef.current) {
-          fileInputRef.current.value = "";
-        }
+        setSingleImageFiles({});
+        Object.values(singleImagePreviews).forEach((url) => URL.revokeObjectURL(url));
+        setSingleImagePreviews({});
       }
     } finally {
       setIsUploadingImages(false);
@@ -628,18 +594,33 @@ const AddUpdateProduct = ({
                   {mode !== "edit" ? (
                     <>
                       <input
-                        ref={fileInputRef}
                         type="file"
                         accept="image/*"
                         multiple
-                        onChange={handleFileSelection}
-                        className="mt-4 block w-full text-sm text-[#6f5a53] file:mr-4 file:rounded-[12px] file:border-0 file:bg-[#7a1e2c] file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white"
+                        onChange={async (event) => {
+                          const files = Array.from(event.target.files || []).slice(0, imageSlots.length);
+                          if (!files.length) return;
+                          setIsPreparingImages(true);
+                          try {
+                            const processed = await Promise.all(files.map(compressImageFile));
+                            Object.values(singleImagePreviews).forEach((url) => URL.revokeObjectURL(url));
+                            const nextFiles = {};
+                            const nextPreviews = {};
+                            processed.forEach((file, i) => {
+                              nextFiles[i] = file;
+                              nextPreviews[i] = URL.createObjectURL(file);
+                            });
+                            setSingleImageFiles(nextFiles);
+                            setSingleImagePreviews(nextPreviews);
+                          } catch (error) {
+                            showApiError(error?.message || "Unable to process selected images.");
+                          } finally {
+                            setIsPreparingImages(false);
+                            event.target.value = "";
+                          }
+                        }}
+                        className="mt-4 block w-full cursor-pointer text-sm text-[#6f5a53] file:mr-4 file:cursor-pointer file:rounded-[12px] file:border-0 file:bg-[#7a1e2c] file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white"
                       />
-                      {selectedFiles.length > 0 ? (
-                        <p className="mt-3 text-sm font-medium text-[#7a1e2c]">
-                          {selectedFiles.length} image{selectedFiles.length > 1 ? "s" : ""} selected
-                        </p>
-                      ) : null}
                       {isPreparingImages ? (
                         <p className="mt-2 text-xs font-semibold uppercase tracking-[0.12em] text-[#a27c68]">
                           Optimizing images...
@@ -657,23 +638,18 @@ const AddUpdateProduct = ({
 
               <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
                 {imageSlots.map((label, index) => {
-                  const file = mode === "edit" ? singleImageFiles[index] : selectedFiles[index];
+                  const file = singleImageFiles[index];
                   const previewUrl =
                     mode === "edit"
                       ? singleImagePreviews[index] || savedProduct?.images?.[index]?.src
-                      : previewUrls[index];
+                      : singleImagePreviews[index];
 
                   return (
-                    <div
-                      key={label}
+                    <div key={label}
                       className="overflow-hidden rounded-[16px] border border-[#e9d8ce] bg-white text-center text-xs font-semibold text-[#7d655d]"
                     >
                       {previewUrl ? (
-                        <img
-                          src={previewUrl}
-                          alt={label}
-                          className="h-28 w-full object-cover"
-                        />
+                        <img src={previewUrl} alt={label} className="h-28 w-full object-cover" />
                       ) : (
                         <div className="flex h-28 items-center justify-center bg-[#faf3ee] text-[#b08c78]">
                           <ImagePlus size={20} />
@@ -684,25 +660,25 @@ const AddUpdateProduct = ({
                         <p className="mt-1 truncate text-[10px] font-medium uppercase tracking-[0.12em] text-[#b08c78]">
                           {file ? file.name : `Slot ${index + 1}`}
                         </p>
-                        {mode === "edit" ? (
-                          <div className="mt-3 space-y-2">
-                            <input
-                              type="file"
-                              accept="image/*"
-                              onChange={(event) => handleSingleImageSelection(event, index)}
-                              className="block w-full cursor-pointer text-[10px] text-[#6f5a53] file:mr-2 file:cursor-pointer file:rounded-[10px] file:border-0 file:bg-[#f3dfd6] file:px-3 file:py-1.5 file:font-semibold file:text-[#7a1e2c]"
-                            />
+                        <div className="mt-3">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(event) => handleSingleImageSelection(event, index)}
+                            className="block w-full cursor-pointer text-[10px] text-[#6f5a53] file:mr-2 file:cursor-pointer file:rounded-[10px] file:border-0 file:bg-[#f3dfd6] file:px-3 file:py-1.5 file:font-semibold file:text-[#7a1e2c]"
+                          />
+                          {mode === "edit" ? (
                             <SellerButton
                               type="button"
                               variant="secondary"
                               disabled={!singleImageFiles[index] || updatingImageIndex === index}
-                              className="min-h-[32px] w-full rounded-[10px] px-3 text-[11px]"
+                              className="mt-2 min-h-[32px] w-full rounded-[10px] px-3 text-[11px]"
                               onClick={() => handleUpdateSingleImage(index)}
                             >
                               {updatingImageIndex === index ? "Updating..." : "Update Image"}
                             </SellerButton>
-                          </div>
-                        ) : null}
+                          ) : null}
+                        </div>
                       </div>
                     </div>
                   );
@@ -739,7 +715,7 @@ const AddUpdateProduct = ({
                 variant="secondary"
                 disabled={
                   !savedProduct?.iProductId ||
-                  selectedFiles.length === 0 ||
+                  Object.keys(singleImageFiles).length === 0 ||
                   isUploadingImages ||
                   isPreparingImages
                 }

@@ -121,7 +121,9 @@ export const UploadProductImages = async (params) => {
   const data = await response.json().catch(() => ({}));
 
   if (!response.ok) {
-    throw { response: { data, status: response.status } };
+    const error = new Error(data?.message || "Request failed");
+    error.response = { data, status: response.status };
+    throw error;
   }
 
   return data;
@@ -154,7 +156,9 @@ export const UpdateProductImage = async (params) => {
   const data = await response.json().catch(() => ({}));
 
   if (!response.ok) {
-    throw { response: { data, status: response.status } };
+    const error = new Error(data?.message || "Request failed");
+    error.response = { data, status: response.status };
+    throw error;
   }
 
   return data;
