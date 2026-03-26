@@ -223,8 +223,11 @@ const normalizeApiProducts = (response, categoryMap = {}) => {
 
 const ProductList = () => {
   const [products, setProducts] = useState([]);
+  const [inventorySummary, setInventorySummary] = useState(null);
   const [isLoadingProducts, setIsLoadingProducts] = useState(true);
   const [query, setQuery] = useState("");
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [filters, setFilters] = useState({ category: "", status: "", customizable: "", priceMin: "", priceMax: "" });
   const [activeImages, setActiveImages] = useState({});
   const [pendingDelete, setPendingDelete] = useState(null);
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
@@ -273,6 +276,7 @@ const ProductList = () => {
         }, {});
 
         setProducts(normalizeApiProducts(response, categoryMap));
+        setInventorySummary(response?.inventorySummary || null);
       } catch (error) {
         showApiError(
           error?.response?.data || {
@@ -287,24 +291,26 @@ const ProductList = () => {
     fetchProducts();
   }, []);
 
-  const filteredProducts = useMemo(
-    () =>
-      products.filter((product) => {
-        const text =
-          `${product.name} ${product.category} ${product.palette} ${product.weave}`.toLowerCase();
-        return text.includes(query.toLowerCase());
-      }),
-    [products, query]
-  );
+  const categoryOptions = useMemo(() => [...new Set(products.map((p) => p.category).filter(Boolean))], [products]);
 
-  const activeProducts = products.filter((product) => product.stock > 0).length;
-  const featuredProducts = products.filter(
-    (product) => product.status === "Featured"
-  ).length;
-  const inventoryValue = products.reduce(
-    (total, product) => total + product.price * product.stock,
-    0
-  );
+  const filteredProducts = useMemo(() => products.filter((product) => {
+    const text = `${product.name} ${product.category} ${product.palette} ${product.weave}`.toLowerCase();
+    if (query && !text.includes(query.toLowerCase())) return false;
+    if (filters.category && product.category !== filters.category) return false;
+    if (filters.status && product.status !== filters.status) return false;
+    if (filters.customizable !== "" && String(product.isCustomizationAvailable) !== filters.customizable) return false;
+    if (filters.priceMin !== "" && product.price < Number(filters.priceMin)) return false;
+    if (filters.priceMax !== "" && product.price > Number(filters.priceMax)) return false;
+    return true;
+  }), [products, query, filters]);
+
+  const activeFilterCount = Object.values(filters).filter(Boolean).length;
+  const clearFilters = () => setFilters({ category: "", status: "", customizable: "", priceMin: "", priceMax: "" });
+
+  const activeProducts = inventorySummary?.availableStock ?? products.filter((p) => p.stock > 0).length;
+  const featuredProducts = products.filter((p) => p.status === "Featured").length;
+  const inventoryValue = inventorySummary?.inventoryValue ?? products.reduce((t, p) => t + p.price * p.stock, 0);
+  const totalProducts = inventorySummary?.productCount ?? products.length;
 
   const changeImage = (productId, direction, totalImages) => {
     setActiveImages((current) => {
@@ -613,8 +619,9 @@ const ProductList = () => {
             variant="ghost"
             type="button"
             className="min-h-[32px] rounded-[10px] px-3 text-[11px] sm:w-auto"
+            onClick={() => setIsFilterOpen((v) => !v)}
           >
-            <Filter size={13} /> Filter
+            <Filter size={13} /> Filter{activeFilterCount > 0 ? ` (${activeFilterCount})` : ""}
           </SellerButton>,
           <SellerButton
             key="add"
@@ -627,11 +634,56 @@ const ProductList = () => {
         ]}
       >
         {isLoadingProducts ? <Loader /> : null}
+
+        {isFilterOpen ? (
+          <div className="rounded-[18px] border border-[#ead8cf] bg-[#fffaf6] p-4 sm:p-5">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#a27c68]">Filter Products</p>
+              {activeFilterCount > 0 ? (
+                <button type="button" onClick={clearFilters} className="text-xs font-semibold text-[#7a1e2c] hover:underline">Clear all</button>
+              ) : null}
+            </div>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+              <div>
+                <label className="text-xs font-bold uppercase tracking-[0.14em] text-[#a27c68]">Category</label>
+                <select value={filters.category} onChange={(e) => setFilters((f) => ({ ...f, category: e.target.value }))} className="seller-select mt-1">
+                  <option value="">All Categories</option>
+                  {categoryOptions.map((cat) => <option key={cat} value={cat}>{cat}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-bold uppercase tracking-[0.14em] text-[#a27c68]">Status</label>
+                <select value={filters.status} onChange={(e) => setFilters((f) => ({ ...f, status: e.target.value }))} className="seller-select mt-1">
+                  <option value="">All Status</option>
+                  <option value="Active">Active</option>
+                  <option value="Out of Stock">Out of Stock</option>
+                  <option value="Inactive">Inactive</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-bold uppercase tracking-[0.14em] text-[#a27c68]">Customizable</label>
+                <select value={filters.customizable} onChange={(e) => setFilters((f) => ({ ...f, customizable: e.target.value }))} className="seller-select mt-1">
+                  <option value="">All</option>
+                  <option value="true">Yes</option>
+                  <option value="false">No</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-bold uppercase tracking-[0.14em] text-[#a27c68]">Min Price</label>
+                <input type="number" value={filters.priceMin} onChange={(e) => setFilters((f) => ({ ...f, priceMin: e.target.value }))} placeholder="0" className="seller-input mt-1" />
+              </div>
+              <div>
+                <label className="text-xs font-bold uppercase tracking-[0.14em] text-[#a27c68]">Max Price</label>
+                <input type="number" value={filters.priceMax} onChange={(e) => setFilters((f) => ({ ...f, priceMax: e.target.value }))} placeholder="Any" className="seller-input mt-1" />
+              </div>
+            </div>
+          </div>
+        ) : null}
         <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <SellerStatCard
             icon={<Package size={20} />}
             label="Total Products"
-            value={products.length}
+            value={totalProducts}
             note="Crafted listings"
             accent="wine"
           />
