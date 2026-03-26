@@ -110,7 +110,7 @@ const Login = () => {
       setLoading(true);
 
       const payload = {
-        EmailOrPhone: trimmedLoginId,
+        emailOrPhone: trimmedLoginId,
         password: form.password,
       };
 
