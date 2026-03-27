@@ -34,6 +34,7 @@ import {
   UpdateProductDetails,
   UpdateProductImage,
   UploadProductImages,
+  UpdateStock,
 } from "../../services/Product/ProductApi";
 import { showApiError, showApiSuccess } from "../../Utils/Utils";
 
@@ -178,7 +179,7 @@ const normalizeApiProducts = (response, categoryMap = {}) => {
     const price = Number(
       product?.dcBasePrice ?? product?.price ?? product?.basePrice ?? 0
     );
-    const stock = Number(product?.iStock ?? product?.stock ?? 0);
+    const stock = Number(product?.productstock ?? product?.iStock ?? product?.stock ?? 0);
     const color = product?.sColor ?? product?.color ?? product?.palette ?? "";
     const description =
       product?.sDescription ?? product?.description ?? product?.weave ?? "";
@@ -234,6 +235,8 @@ const ProductList = () => {
   const [productModalMode, setProductModalMode] = useState("add");
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [imageViewer, setImageViewer] = useState(null);
+  const [pendingStock, setPendingStock] = useState({});
+  const [stockConfirm, setStockConfirm] = useState(null);
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -591,14 +594,32 @@ const ProductList = () => {
     }
   };
 
-  const handleUpdateStock = (productId, direction) => {
-    setProducts((current) =>
-      current.map((product) =>
-        product.id === productId
-          ? { ...product, stock: Math.max(0, product.stock + direction) }
-          : product
-      )
-    );
+  const handleUpdateStock = (productId, currentStock, direction) => {
+    const next = Math.max(0, currentStock + direction);
+    setPendingStock((s) => ({ ...s, [productId]: next }));
+  };
+
+  const handleConfirmStock = (product) => {
+    const pending = pendingStock[product.id];
+    if (pending === undefined || pending === product.stock) return;
+    setStockConfirm({ product, newStock: pending });
+  };
+
+  const handleSubmitStock = async () => {
+    if (!stockConfirm) return;
+    const { product, newStock } = stockConfirm;
+    try {
+      const response = await UpdateStock({ iProductId: product.iProductId, iStock: newStock });
+      setProducts((current) =>
+        current.map((p) => p.id === product.id ? { ...p, stock: newStock } : p)
+      );
+      setPendingStock((s) => { const n = { ...s }; delete n[product.id]; return n; });
+      showApiSuccess(getResponseMessage(response) || "Stock updated successfully.");
+    } catch (error) {
+      showApiError(error?.response?.data || { message: "Unable to update stock right now." });
+    } finally {
+      setStockConfirm(null);
+    }
   };
 
   const confirmDelete = async () => {
@@ -882,33 +903,42 @@ const ProductList = () => {
                         <div className="rounded-[22px] border border-[#ecd8d0] bg-[#fff9f5] p-4">
                           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                             <div>
-                              <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#a27c68]">
-                                Manage Stock
-                              </p>
+                              <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#a27c68]">Manage Stock</p>
                               <p className="mt-1 text-sm text-[#6d5850]">
-                                Adjust available pieces locally while the dedicated stock endpoint is still pending.
+                                Current: <span className="font-semibold text-[#351915]">{product.stock}</span> pieces
                               </p>
                             </div>
-                            <div className="inline-flex items-center gap-2 rounded-full border border-[#ead8cf] bg-white p-1.5">
-                              <button
-                                type="button"
-                                onClick={() => handleUpdateStock(product.id, -1)}
-                                className="flex h-9 w-9 items-center justify-center rounded-full bg-[#f8ede7] text-[#7a1e2c] shadow-sm transition hover:bg-[#f1ddd4]"
-                                aria-label={`Decrease stock for ${product.name}`}
-                              >
-                                <Minus size={16} />
-                              </button>
-                              <span className="min-w-[48px] text-center text-sm font-semibold text-[#351915]">
-                                {product.stock}
-                              </span>
-                              <button
-                                type="button"
-                                onClick={() => handleUpdateStock(product.id, 1)}
-                                className="flex h-9 w-9 items-center justify-center rounded-full bg-[#7a1e2c] text-white shadow-sm transition hover:bg-[#651623]"
-                                aria-label={`Increase stock for ${product.name}`}
-                              >
-                                <Plus size={16} />
-                              </button>
+                            <div className="flex flex-col items-end gap-2">
+                              <div className="inline-flex items-center gap-2 rounded-full border border-[#ead8cf] bg-white p-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() => handleUpdateStock(product.id, pendingStock[product.id] ?? product.stock, -1)}
+                                  className="flex h-9 w-9 items-center justify-center rounded-full bg-[#f8ede7] text-[#7a1e2c] shadow-sm transition hover:bg-[#f1ddd4]"
+                                  aria-label={`Decrease stock for ${product.name}`}
+                                >
+                                  <Minus size={16} />
+                                </button>
+                                <span className="min-w-[48px] text-center text-sm font-semibold text-[#351915]">
+                                  {pendingStock[product.id] ?? product.stock}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleUpdateStock(product.id, pendingStock[product.id] ?? product.stock, 1)}
+                                  className="flex h-9 w-9 items-center justify-center rounded-full bg-[#7a1e2c] text-white shadow-sm transition hover:bg-[#651623]"
+                                  aria-label={`Increase stock for ${product.name}`}
+                                >
+                                  <Plus size={16} />
+                                </button>
+                              </div>
+                              {pendingStock[product.id] !== undefined && pendingStock[product.id] !== product.stock ? (
+                                <button
+                                  type="button"
+                                  onClick={() => handleConfirmStock(product)}
+                                  className="rounded-[10px] bg-[#7a1e2c] px-4 py-1.5 text-xs font-semibold text-white transition hover:bg-[#651623]"
+                                >
+                                  Update Stock
+                                </button>
+                              ) : null}
                             </div>
                           </div>
                         </div>
@@ -934,11 +964,25 @@ const ProductList = () => {
       />
 
       <ConfirmationModal
+        open={Boolean(stockConfirm)}
+        title="Update stock?"
+        message={
+          stockConfirm
+            ? `Update stock for "${stockConfirm.product.name}" from ${stockConfirm.product.stock} to ${stockConfirm.newStock} pieces?`
+            : ""
+        }
+        confirmLabel="Update"
+        cancelLabel="Cancel"
+        onConfirm={handleSubmitStock}
+        onClose={() => setStockConfirm(null)}
+      />
+
+      <ConfirmationModal
         open={Boolean(pendingDelete)}
         title="Delete product?"
         message={
           pendingDelete
-            ? `Do you want to delete ${pendingDelete.name}? This will call the product delete API.`
+            ? `Are you sure you want to delete "${pendingDelete.name}"? This product will be permanently removed.`
             : ""
         }
         confirmLabel="Delete"
