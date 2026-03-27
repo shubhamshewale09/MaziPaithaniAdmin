@@ -21,22 +21,20 @@ jobs:
       with:
         node-version: '18'
 
-    # ✅ Install Dependencies (IMPORTANT FIX)
+   # ✅ Install Dependencies
     - name: 📦 Install Dependencies
-      working-directory: ./ReactApp
       run: npm install
 
-    # ✅ Build React
+     # ✅ Build React
     - name: 🏗️ Build React App
-      working-directory: ./ReactApp
       run: |
-        CI=false npm run build
+       CI=false npm run build
 
-    # ✅ Debug
-    - name: 📂 Show Build Folder
-      run: |
+        # ✅ Debug
+       - name: 📂 Show Build Folder
+       run: |
         echo "Build folder contents:"
-        ls -la ReactApp/build
+          ls -la build
 
     # ✅ SSH Test
     - name: 🔐 Test SSH Connection
