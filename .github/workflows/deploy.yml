@@ -1,4 +1,3 @@
-
 name: Deploy React App to EC2 IIS (Demo)
 
 on:
@@ -11,72 +10,72 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    # ✅ Checkout
-    - name: 📥 Checkout Code
-      uses: actions/checkout@v3
+      # ✅ Checkout
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v3
 
-    # ✅ Setup Node
-    - name: ⚙️ Setup Node.js
-      uses: actions/setup-node@v3
-      with:
-        node-version: '18'
+      # ✅ Setup Node
+      - name: ⚙️ Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
 
-   # ✅ Install Dependencies
-    - name: 📦 Install Dependencies
-      run: npm install
+      # ✅ Install Dependencies
+      - name: 📦 Install Dependencies
+        run: npm install
 
-     # ✅ Build React
-    - name: 🏗️ Build React App
-      run: |
-       CI=false npm run build
+      # ✅ Build React
+      - name: 🏗️ Build React App
+        run: CI=false npm run build
 
-        # ✅ Debug
-       - name: 📂 Show Build Folder
-       run: |
-        echo "Build folder contents:"
+      # ✅ Debug
+      - name: 📂 Show Build Folder
+        run: |
+          echo "Build folder contents:"
           ls -la build
 
-    # ✅ SSH Test
-    - name: 🔐 Test SSH Connection
-      uses: appleboy/ssh-action@v1.0.0
-      with:
-        host: 15.207.106.250
-        username: Administrator
-        key: ${{ secrets.EC2_SSH_KEY }}
-        script: |
-          echo "Connected"
-          hostname
+      # ✅ SSH Test
+      - name: 🔐 Test SSH Connection
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: 15.207.106.250
+          username: Administrator
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            echo "Connected"
+            hostname
 
-    # ✅ Stop IIS
-    - name: 🛑 Stop IIS App Pool
-      uses: appleboy/ssh-action@v1.0.0
-      with:
-        host: 15.207.106.250
-        username: Administrator
-        key: ${{ secrets.EC2_SSH_KEY }}
-        script: |
-          powershell -Command "Import-Module WebAdministration; if ((Get-WebAppPoolState -Name 'Demo').Value -eq 'Started') { Stop-WebAppPool -Name 'Demo' }"
+      # ✅ Stop IIS App Pool
+      - name: 🛑 Stop IIS App Pool
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: 15.207.106.250
+          username: Administrator
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            powershell -Command "Import-Module WebAdministration; if ((Get-WebAppPoolState -Name 'Demo').Value -eq 'Started') { Stop-WebAppPool -Name 'Demo' }"
 
-    # ✅ Upload (IMPORTANT FIX)
-    - name: 🚀 Upload Build
-      uses: appleboy/scp-action@v0.1.7
-      with:
-        host: 15.207.106.250
-        username: Administrator
-        key: ${{ secrets.EC2_SSH_KEY }}
-        source: "ReactApp/build/*"
-        target: "C:/inetpub/ReactApp"
-        strip_components: 2
+      # ✅ Upload Build (FIXED PATH)
+      - name: 🚀 Upload Build
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: 15.207.106.250
+          username: Administrator
+          key: ${{ secrets.EC2_SSH_KEY }}
+          source: "build/*"
+          target: "C:/inetpub/ReactApp"
+          strip_components: 1
 
-    # ✅ Start IIS
-    - name: ▶️ Start IIS App Pool
-      uses: appleboy/ssh-action@v1.0.0
-      with:
-        host: 15.207.106.250
-        username: Administrator
-        key: ${{ secrets.EC2_SSH_KEY }}
-        script: |
-          powershell -Command "Import-Module WebAdministration; Start-WebAppPool -Name 'Demo'"
+      # ✅ Start IIS
+      - name: ▶️ Start IIS App Pool
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: 15.207.106.250
+          username: Administrator
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            powershell -Command "Import-Module WebAdministration; Start-WebAppPool -Name 'Demo'"
 
-    - name: ✅ Done
-      run: echo "React Deployment Successful 🚀"
+      # ✅ Done
+      - name: ✅ Done
+        run: echo "React Deployment Successful 🚀"
