@@ -1,26 +1,32 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import { ImagePlus, X } from "lucide-react";
-import { sellerProducts } from "../../data/sellerStaticData";
-import { SellerButton } from "../../components/seller/SellerUI";
-import { GetProductCategories } from "../../services/Product/ProductApi";
-import { showApiError } from "../../Utils/Utils";
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { ImagePlus, X } from 'lucide-react';
+import { sellerProducts } from '../../data/sellerStaticData';
+import { SellerButton } from '../../components/seller/SellerUI';
+import { GetProductCategories } from '../../services/Product/ProductApi';
+import { showApiError } from '../../Utils/Utils';
 
 const emptyForm = {
-  id: "",
+  id: '',
   iProductId: null,
-  productName: "",
-  categoryId: "",
-  categoryLabel: "",
-  price: "",
-  stock: "",
-  color: "",
-  fabric: "",
-  designType: "",
-  description: "",
-  isCustomizationAvailable: "false",
+  productName: '',
+  categoryId: '',
+  categoryLabel: '',
+  price: '',
+  stock: '',
+  color: '',
+  fabric: '',
+  designType: '',
+  description: '',
+  isCustomizationAvailable: 'false',
 };
 
-const imageSlots = ["Main Image", "Gallery 2", "Gallery 3", "Gallery 4", "Gallery 5"];
+const imageSlots = [
+  'Main Image',
+  'Gallery 2',
+  'Gallery 3',
+  'Gallery 4',
+  'Gallery 5',
+];
 const MAX_IMAGE_WIDTH = 1600;
 const MAX_IMAGE_HEIGHT = 1600;
 const IMAGE_OUTPUT_QUALITY = 0.8;
@@ -61,23 +67,25 @@ const compressImageFile = async (file) => {
 };
 
 const buildFormState = (product) => ({
-  id: product?.id || "",
+  id: product?.id || '',
   iProductId: product?.iProductId ?? null,
-  productName: product?.name || "",
-  categoryId: product?.iCategoryId ? String(product.iCategoryId) : "",
-  categoryLabel: product?.category || "",
-  price: product?.price ? String(product.price) : "",
-  stock: product?.stock !== undefined ? String(product.stock) : "",
-  color: product?.color || product?.palette || "",
-  fabric: product?.fabric || "",
-  designType: product?.designType || "",
-  description: product?.weave || "",
-  isCustomizationAvailable: product?.isCustomizationAvailable ? "true" : "false",
+  productName: product?.name || '',
+  categoryId: product?.iCategoryId ? String(product.iCategoryId) : '',
+  categoryLabel: product?.category || '',
+  price: product?.price ? String(product.price) : '',
+  stock: product?.stock !== undefined ? String(product.stock) : '',
+  color: product?.color || product?.palette || '',
+  fabric: product?.fabric || '',
+  designType: product?.designType || '',
+  description: product?.weave || '',
+  isCustomizationAvailable: product?.isCustomizationAvailable
+    ? 'true'
+    : 'false',
 });
 
 const createProductId = (products) => {
   const highestId = products.reduce((maxId, product) => {
-    const numericPart = Number(product.id?.replace(/[^0-9]/g, "")) || 0;
+    const numericPart = Number(product.id?.replace(/[^0-9]/g, '')) || 0;
     return Math.max(maxId, numericPart);
   }, 100);
   return `PRD-${highestId + 1}`;
@@ -106,23 +114,28 @@ const normalizeCategoryOptions = (response) => {
     .sort((left, right) => left.sortOrder - right.sortOrder);
 };
 
-const buildProductPayload = (formState, fallbackProduct, products, categoryOptions) => {
+const buildProductPayload = (
+  formState,
+  fallbackProduct,
+  products,
+  categoryOptions,
+) => {
   const baseImages = fallbackProduct?.images || [
-    { label: "Front View", src: sellerProducts[0].images[0].src },
-    { label: "Pallu Detail", src: sellerProducts[0].images[1].src },
-    { label: "Border Closeup", src: sellerProducts[0].images[2].src },
+    { label: 'Front View', src: sellerProducts[0].images[0].src },
+    { label: 'Pallu Detail', src: sellerProducts[0].images[1].src },
+    { label: 'Border Closeup', src: sellerProducts[0].images[2].src },
   ];
   const selectedCategory = categoryOptions.find((item) => item.value === String(formState.categoryId));
   return {
     id: fallbackProduct?.id || createProductId(products),
     iProductId: formState.iProductId,
     iCategoryId: Number(formState.categoryId) || null,
-    name: formState.productName.trim() || "Untitled Paithani",
-    category: selectedCategory?.label || formState.categoryLabel || "Category",
+    name: formState.productName.trim() || 'Untitled Paithani',
+    category: selectedCategory?.label || formState.categoryLabel || 'Category',
     stock: Number(formState.stock) || 0,
     price: Number(formState.price) || 0,
     color: formState.color.trim(),
-    palette: formState.color.trim() || "Custom palette",
+    palette: formState.color.trim() || 'Custom palette',
     fabric: formState.fabric.trim(),
     designType: formState.designType.trim(),
     weave: formState.description.trim() || "Seller-added product description will appear here.",
@@ -138,7 +151,7 @@ const FieldError = ({ error }) =>
 
 const AddUpdateProduct = ({
   open,
-  mode = "add",
+  mode = 'add',
   product = null,
   products = [],
   onClose,
@@ -199,7 +212,7 @@ const AddUpdateProduct = ({
     return categoryOptions.length > 0 ? "Select category" : "No categories found";
   }, [categoryLoading, categoryOptions.length]);
 
-  const canUploadImages = mode === "edit" || Boolean(savedProduct?.iProductId);
+  const canUploadImages = mode === 'edit' || Boolean(savedProduct?.iProductId);
 
   if (!open) return null;
 
@@ -272,7 +285,7 @@ const AddUpdateProduct = ({
       });
       if (mode === "add") setFormErrors((e) => ({ ...e, images: "" }));
     } catch (error) {
-      showApiError(error?.message || "Unable to process selected image.");
+      showApiError(error?.message || 'Unable to process selected image.');
     }
   };
 
@@ -308,13 +321,15 @@ const AddUpdateProduct = ({
   const selectedImageCount = Object.keys(singleImageFiles).length;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-[#2d140f]/45 px-4 py-8 backdrop-blur-[3px] sm:py-12">
-      <div className="w-full max-w-5xl rounded-[22px] border border-[#ead8cf] bg-[#fffaf6] shadow-[0_30px_80px_rgba(45,20,15,0.22)]">
-        <div className="flex items-center justify-between gap-4 border-b border-[#f1dfd7] px-5 py-4 sm:px-7 sm:py-5">
+    <div className='fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-[#2d140f]/45 px-4 py-8 backdrop-blur-[3px] sm:py-12'>
+      <div className='w-full max-w-5xl rounded-[22px] border border-[#ead8cf] bg-[#fffaf6] shadow-[0_30px_80px_rgba(45,20,15,0.22)]'>
+        <div className='flex items-center justify-between gap-4 border-b border-[#f1dfd7] px-5 py-4 sm:px-7 sm:py-5'>
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.24em] text-[#a27c68]">Seller Product Form</p>
-            <h2 className="mt-2 text-2xl font-bold text-[#381c17] sm:text-[1.8rem]">
-              {mode === "edit" ? "Edit Product" : "Add Product"}
+            <p className='text-xs font-bold uppercase tracking-[0.24em] text-[#a27c68]'>
+              Seller Product Form
+            </p>
+            <h2 className='mt-2 text-2xl font-bold text-[#381c17] sm:text-[1.8rem]'>
+              {mode === 'edit' ? 'Edit Product' : 'Add Product'}
             </h2>
           </div>
           <button type="button" onClick={onClose} className="flex h-10 w-10 items-center justify-center rounded-[14px] bg-white text-[#7a1e2c] shadow-sm transition hover:bg-[#f8ede7]" aria-label="Close product form">
@@ -340,7 +355,7 @@ const AddUpdateProduct = ({
                 id="categoryId" name="categoryId" value={formState.categoryId} onChange={handleChange}
                 className={`seller-select${formErrors.categoryId ? " ring-2 ring-red-400" : ""}`}
               >
-                <option value="">{categoryPlaceholder}</option>
+                <option value=''>{categoryPlaceholder}</option>
                 {categoryOptions.map((category) => (
                   <option key={category.value} value={category.value}>{category.label}</option>
                 ))}
@@ -402,8 +417,10 @@ const AddUpdateProduct = ({
               </div>
             </div>
 
-            <div className="sm:col-span-2">
-              <label className="seller-label" htmlFor="description">Description</label>
+            <div className='sm:col-span-2'>
+              <label className='seller-label' htmlFor='description'>
+                Description
+              </label>
               <textarea
                 id="description" name="description" value={formState.description} onChange={handleChange}
                 className="seller-textarea min-h-[120px]"
@@ -413,10 +430,10 @@ const AddUpdateProduct = ({
           </div>
 
           {canUploadImages ? (
-            <div className="seller-soft-panel rounded-[18px] p-5 sm:p-6">
-              <div className="flex min-h-[220px] items-center justify-center rounded-[16px] border border-dashed border-[#d8b8ab] bg-white/80 px-4 py-6">
-                <div className="w-full text-center">
-                  <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-[16px] bg-[#fff1e7] text-[#7a1e2c]">
+            <div className='seller-soft-panel rounded-[18px] p-5 sm:p-6'>
+              <div className='flex min-h-[220px] items-center justify-center rounded-[16px] border border-dashed border-[#d8b8ab] bg-white/80 px-4 py-6'>
+                <div className='w-full text-center'>
+                  <div className='mx-auto flex h-14 w-14 items-center justify-center rounded-[16px] bg-[#fff1e7] text-[#7a1e2c]'>
                     <ImagePlus size={24} />
                   </div>
                   <p className="mt-4 text-sm font-semibold text-[#381c17]">
@@ -425,7 +442,12 @@ const AddUpdateProduct = ({
                   <p className="mx-auto mt-2 max-w-[260px] text-sm leading-6 text-[#7a645b]">
                     {mode === "edit" ? "Update one image at a time for this product." : "Select images per slot below, or use bulk select to fill all slots at once."}
                   </p>
-                  {mode !== "edit" ? (
+                  <p className='mx-auto mt-2 max-w-[260px] text-sm leading-6 text-[#7a645b]'>
+                    {mode === 'edit'
+                      ? 'Update one image at a time for this product.'
+                      : 'Use the saved product ID to upload the main image and gallery images.'}
+                  </p>
+                  {mode !== 'edit' ? (
                     <>
                       <input
                         type="file" accept="image/*" multiple
@@ -465,7 +487,7 @@ const AddUpdateProduct = ({
                 </div>
               </div>
 
-              <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+              <div className='mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3'>
                 {imageSlots.map((label, index) => {
                   const file = singleImageFiles[index];
                   const previewUrl = mode === "edit"
@@ -477,13 +499,13 @@ const AddUpdateProduct = ({
                       {previewUrl ? (
                         <img src={previewUrl} alt={label} className="h-28 w-full object-cover" />
                       ) : (
-                        <div className="flex h-28 items-center justify-center bg-[#faf3ee] text-[#b08c78]">
+                        <div className='flex h-28 items-center justify-center bg-[#faf3ee] text-[#b08c78]'>
                           <ImagePlus size={20} />
                         </div>
                       )}
-                      <div className="px-3 py-4">
+                      <div className='px-3 py-4'>
                         <p>{label}</p>
-                        <p className="mt-1 truncate text-[10px] font-medium uppercase tracking-[0.12em] text-[#b08c78]">
+                        <p className='mt-1 truncate text-[10px] font-medium uppercase tracking-[0.12em] text-[#b08c78]'>
                           {file ? file.name : `Slot ${index + 1}`}
                         </p>
                         <div className="mt-3">
@@ -499,7 +521,9 @@ const AddUpdateProduct = ({
                               className="mt-2 min-h-[32px] w-full rounded-[10px] px-3 text-[11px]"
                               onClick={() => handleUpdateSingleImage(index)}
                             >
-                              {updatingImageIndex === index ? "Updating..." : "Update Image"}
+                              {updatingImageIndex === index
+                                ? 'Updating...'
+                                : 'Update Image'}
                             </SellerButton>
                           ) : null}
                         </div>
@@ -510,14 +534,17 @@ const AddUpdateProduct = ({
               </div>
             </div>
           ) : (
-            <div className="seller-soft-panel flex items-center justify-center rounded-[18px] p-5 text-center sm:p-6">
+            <div className='seller-soft-panel flex items-center justify-center rounded-[18px] p-5 text-center sm:p-6'>
               <div>
-                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-[16px] bg-[#fff1e7] text-[#7a1e2c]">
+                <div className='mx-auto flex h-14 w-14 items-center justify-center rounded-[16px] bg-[#fff1e7] text-[#7a1e2c]'>
                   <ImagePlus size={24} />
                 </div>
-                <p className="mt-4 text-sm font-semibold text-[#381c17]">Save product details first</p>
-                <p className="mx-auto mt-2 max-w-[260px] text-sm leading-6 text-[#7a645b]">
-                  After the product is saved and the product ID is created, image upload options will appear here.
+                <p className='mt-4 text-sm font-semibold text-[#381c17]'>
+                  Save product details first
+                </p>
+                <p className='mx-auto mt-2 max-w-[260px] text-sm leading-6 text-[#7a645b]'>
+                  After the product is saved and the product ID is created,
+                  image upload options will appear here.
                 </p>
               </div>
             </div>
@@ -536,10 +563,15 @@ const AddUpdateProduct = ({
                 className="min-h-[38px] rounded-[12px] px-4 text-sm sm:w-auto"
                 onClick={handleUploadSelectedImages}
               >
-                {isUploadingImages ? "Saving Images..." : "Save Images"}
+                {isUploadingImages ? 'Saving Images...' : 'Save Images'}
               </SellerButton>
             ) : null}
-            <SellerButton type="button" variant="ghost" className="min-h-[38px] rounded-[12px] px-4 text-sm sm:w-auto" onClick={onClose}>
+            <SellerButton
+              type='button'
+              variant='ghost'
+              className='min-h-[38px] rounded-[12px] px-4 text-sm sm:w-auto'
+              onClick={onClose}
+            >
               Cancel
             </SellerButton>
           </div>
