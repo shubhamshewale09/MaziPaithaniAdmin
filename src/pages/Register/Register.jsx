@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
-import { User, Mail, Phone } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { User, Mail, Phone, ChevronDown, ShieldCheck } from 'lucide-react';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import validator from 'validator';
 import { AuthRegister } from '../../services/auth/Register';
+import { getDropdownByTaskId } from '../../services/auth/Dropdown';
 import { showApiError } from '../../Utils/Utils';
 import MetaTitle from '../../components/custom/MetaTitle';
 import { toast } from 'react-toastify';
@@ -16,44 +17,42 @@ const initialFormState = {
   sEmail: '',
   sPhoneNumber: '',
   sPassword: '',
+  roleId: '',
 };
 
 const registerValidationSchema = Yup.object({
   sFirstName: Yup.string()
     .required('First name required')
-    .matches(
-      /^[A-Za-z]+$/,
-      'First name should not contain spaces or special characters',
-    ),
+    .matches(/^[A-Za-z]+$/, 'First name should not contain spaces or special characters'),
   sLastName: Yup.string()
     .required('Last name required')
-    .matches(
-      /^[A-Za-z]+$/,
-      'Last name should not contain spaces or special characters',
-    ),
+    .matches(/^[A-Za-z]+$/, 'Last name should not contain spaces or special characters'),
   sEmail: Yup.string()
     .required('Email required')
-    .test('is-valid-email', 'Invalid email', (value) =>
-      value ? validator.isEmail(value) : false,
-    ),
+    .test('is-valid-email', 'Invalid email', (value) => (value ? validator.isEmail(value) : false)),
   sPhoneNumber: Yup.string()
     .required('Phone number required')
     .test('is-valid-mobile', 'Enter valid 10 digit mobile number', (value) =>
-      value
-        ? validator.isMobilePhone(value, 'en-IN', { strictMode: false })
-        : false,
+      value ? validator.isMobilePhone(value, 'en-IN', { strictMode: false }) : false,
     )
     .test('is-ten-digits', 'Enter valid 10 digit mobile number', (value) =>
       value ? /^\d{10}$/.test(value) : false,
     ),
   sPassword: Yup.string().required('Password required'),
+  roleId: Yup.string().required('Please select a role'),
 });
 
 const Register = () => {
   const navigate = useNavigate();
-
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [roles, setRoles] = useState([]);
+
+  useEffect(() => {
+    getDropdownByTaskId(1)
+      .then((res) => setRoles(res?.data || []))
+      .catch(() => setRoles([]));
+  }, []);
 
   const formik = useFormik({
     initialValues: initialFormState,
@@ -61,31 +60,17 @@ const Register = () => {
     onSubmit: async (values, { resetForm }) => {
       try {
         setLoading(true);
-
-        const { accountType, ...restValues } = values;
-        const payload = {
-          ...restValues,
-          roleId: accountType === 'seller' ? 2 : 3,
-        };
+        const payload = { ...values };
         const res = await AuthRegister(payload);
         const responseMessage = (
-          res?.message ||
-          res?.errorMessage ||
-          res?.responseData?.message ||
-          ''
-        )
-          .toString()
-          .toLowerCase();
+          res?.message || res?.errorMessage || res?.responseData?.message || ''
+        ).toString().toLowerCase();
 
         const isSuccess =
-          res?.statusCode === 200 ||
-          res?.statusCode === 201 ||
-          res?.status === 200 ||
-          res?.status === 201 ||
-          res?.success === true ||
-          res?.isSuccess === true ||
-          responseMessage.includes('success') ||
-          responseMessage.includes('registered');
+          res?.statusCode === 200 || res?.statusCode === 201 ||
+          res?.status === 200 || res?.status === 201 ||
+          res?.success === true || res?.isSuccess === true ||
+          responseMessage.includes('success') || responseMessage.includes('registered');
 
         if (isSuccess) {
           resetForm();
@@ -93,10 +78,8 @@ const Register = () => {
           navigate('/login', { replace: true });
           return;
         }
-
         showApiError(res);
       } catch (error) {
-        console.log(error);
         showApiError(error.response?.data || { message: 'Error' });
       } finally {
         setLoading(false);
@@ -106,19 +89,15 @@ const Register = () => {
 
   const handleNameChange = (e) => {
     const { name, value } = e.target;
-    const sanitizedValue = value.replace(/\s/g, '').replace(/[^A-Za-z]/g, '');
-    formik.setFieldValue(name, sanitizedValue);
+    formik.setFieldValue(name, value.replace(/\s/g, '').replace(/[^A-Za-z]/g, ''));
   };
 
   const handlePhoneChange = (e) => {
-    const numericValue = e.target.value.replace(/\D/g, '').slice(0, 10);
-    formik.setFieldValue('sPhoneNumber', numericValue);
+    formik.setFieldValue('sPhoneNumber', e.target.value.replace(/\D/g, '').slice(0, 10));
   };
 
   const getFieldError = (fieldName) =>
-    formik.touched[fieldName] && formik.errors[fieldName]
-      ? formik.errors[fieldName]
-      : '';
+    formik.touched[fieldName] && formik.errors[fieldName] ? formik.errors[fieldName] : '';
 
   return (
     <>
@@ -126,18 +105,41 @@ const Register = () => {
 
       <div className='min-h-screen flex items-center justify-center bg-gradient-to-br from-yellow-50 to-red-50 p-4'>
         <div className='w-full max-w-5xl bg-white rounded-3xl shadow-2xl p-8 md:p-12'>
-          <h1 className='text-3xl md:text-4xl font-bold text-[#C9A227] text-center'>
-            माझी पैठणी
-          </h1>
 
-          <p className='text-center text-gray-500 mt-2'>
-            Create your account to explore authentic Paithani sarees
-          </p>
+          <h1 className='text-3xl md:text-4xl font-bold text-[#C9A227] text-center'>माझी पैठणी</h1>
+          <p className='text-center text-gray-500 mt-2'>Create your account to explore authentic Paithani sarees</p>
 
-          <form
-            className='grid md:grid-cols-2 gap-6 mt-10'
-            onSubmit={formik.handleSubmit}
-          >
+          <form className='grid md:grid-cols-2 gap-6 mt-10' onSubmit={formik.handleSubmit}>
+
+            {/* Role Dropdown — full width */}
+            <div className='md:col-span-2'>
+              <div className='relative'>
+                <ShieldCheck className='pointer-events-none absolute left-3 top-3.5 text-gray-400' size={18} />
+                <select
+                  name='roleId'
+                  value={formik.values.roleId}
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
+                  className={`w-full pl-10 pr-10 p-3 border rounded-xl focus:ring-2 focus:ring-red-300 appearance-none bg-white cursor-pointer ${
+                    formik.values.roleId ? 'text-gray-800' : 'text-gray-400'
+                  } ${getFieldError('roleId') ? 'border-red-400' : 'border-gray-200'}`}
+                >
+                  <option value=''>Select Role</option>
+                  {roles.map((role) => (
+                    <option key={role.id} value={role.id}>
+                      {role.name}
+                    </option>
+                  ))}
+  
+                </select>
+                <ChevronDown className='pointer-events-none absolute right-3 top-3.5 text-gray-400' size={18} />
+              </div>
+              {getFieldError('roleId') && (
+                <p className='text-red-500 text-xs mt-1'>{getFieldError('roleId')}</p>
+              )}
+            </div>
+
+            {/* First Name */}
             <div className='relative'>
               <input
                 name='sFirstName'
@@ -145,16 +147,15 @@ const Register = () => {
                 onChange={handleNameChange}
                 onBlur={formik.handleBlur}
                 placeholder='First Name'
-                className='w-full p-3 border rounded-xl focus:ring-2 focus:ring-red-300'
+                className={`w-full p-3 pr-10 border rounded-xl focus:ring-2 focus:ring-red-300 ${getFieldError('sFirstName') ? 'border-red-400' : ''}`}
               />
-              <User className='absolute right-3 top-3 text-gray-400' />
+              <User className='absolute right-3 top-3 text-gray-400' size={18} />
               {getFieldError('sFirstName') && (
-                <p className='text-red-500 text-xs'>
-                  {getFieldError('sFirstName')}
-                </p>
+                <p className='text-red-500 text-xs mt-1'>{getFieldError('sFirstName')}</p>
               )}
             </div>
 
+            {/* Last Name */}
             <div className='relative'>
               <input
                 name='sLastName'
@@ -162,16 +163,15 @@ const Register = () => {
                 onChange={handleNameChange}
                 onBlur={formik.handleBlur}
                 placeholder='Last Name'
-                className='w-full p-3 border rounded-xl focus:ring-2 focus:ring-red-300'
+                className={`w-full p-3 pr-10 border rounded-xl focus:ring-2 focus:ring-red-300 ${getFieldError('sLastName') ? 'border-red-400' : ''}`}
               />
-              <User className='absolute right-3 top-3 text-gray-400' />
+              <User className='absolute right-3 top-3 text-gray-400' size={18} />
               {getFieldError('sLastName') && (
-                <p className='text-red-500 text-xs'>
-                  {getFieldError('sLastName')}
-                </p>
+                <p className='text-red-500 text-xs mt-1'>{getFieldError('sLastName')}</p>
               )}
             </div>
 
+            {/* Email */}
             <div className='relative'>
               <input
                 name='sEmail'
@@ -179,16 +179,15 @@ const Register = () => {
                 onChange={formik.handleChange}
                 onBlur={formik.handleBlur}
                 placeholder='Email'
-                className='w-full p-3 border rounded-xl focus:ring-2 focus:ring-red-300'
+                className={`w-full p-3 pr-10 border rounded-xl focus:ring-2 focus:ring-red-300 ${getFieldError('sEmail') ? 'border-red-400' : ''}`}
               />
-              <Mail className='absolute right-3 top-3 text-gray-400' />
+              <Mail className='absolute right-3 top-3 text-gray-400' size={18} />
               {getFieldError('sEmail') && (
-                <p className='text-red-500 text-xs'>
-                  {getFieldError('sEmail')}
-                </p>
+                <p className='text-red-500 text-xs mt-1'>{getFieldError('sEmail')}</p>
               )}
             </div>
 
+            {/* Phone */}
             <div className='relative'>
               <input
                 name='sPhoneNumber'
@@ -196,16 +195,15 @@ const Register = () => {
                 onChange={handlePhoneChange}
                 onBlur={formik.handleBlur}
                 placeholder='Phone Number'
-                className='w-full p-3 border rounded-xl focus:ring-2 focus:ring-red-300'
+                className={`w-full p-3 pr-10 border rounded-xl focus:ring-2 focus:ring-red-300 ${getFieldError('sPhoneNumber') ? 'border-red-400' : ''}`}
               />
-              <Phone className='absolute right-3 top-3 text-gray-400' />
+              <Phone className='absolute right-3 top-3 text-gray-400' size={18} />
               {getFieldError('sPhoneNumber') && (
-                <p className='text-red-500 text-xs'>
-                  {getFieldError('sPhoneNumber')}
-                </p>
+                <p className='text-red-500 text-xs mt-1'>{getFieldError('sPhoneNumber')}</p>
               )}
             </div>
 
+            {/* Password — full width */}
             <div className='relative md:col-span-2'>
               <input
                 type={showPassword ? 'text' : 'password'}
@@ -214,32 +212,26 @@ const Register = () => {
                 onChange={formik.handleChange}
                 onBlur={formik.handleBlur}
                 placeholder='Password'
-                className='w-full p-3 border rounded-xl focus:ring-2 focus:ring-red-300'
+                className={`w-full p-3 pr-10 border rounded-xl focus:ring-2 focus:ring-red-300 ${getFieldError('sPassword') ? 'border-red-400' : ''}`}
               />
               <button
                 type='button'
                 onClick={() => setShowPassword(!showPassword)}
-                className='absolute right-3 top-3'
+                className='absolute right-3 top-3.5 text-gray-400 hover:text-gray-600'
               >
                 {showPassword ? <FaEyeSlash /> : <FaEye />}
               </button>
               {getFieldError('sPassword') && (
-                <p className='text-red-500 text-xs'>
-                  {getFieldError('sPassword')}
-                </p>
+                <p className='text-red-500 text-xs mt-1'>{getFieldError('sPassword')}</p>
               )}
             </div>
 
-            <div className='md:col-span-2 mt-4'>
+            {/* Submit */}
+            <div className='md:col-span-2'>
               <button
                 type='submit'
                 disabled={loading}
-                className='w-full py-3 bg-[#7a1e2c] text-white font-semibold rounded-xl text-sm
-                    shadow-lg shadow-[#7a1e2c]/30
-                    hover:bg-[#651623]
-                    hover:scale-[1.02]
-                    active:scale-[0.98]
-                    transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed'
+                className='w-full py-3 bg-[#7a1e2c] text-white font-semibold rounded-xl text-sm shadow-lg shadow-[#7a1e2c]/30 hover:bg-[#651623] hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed'
               >
                 {loading ? 'Registering...' : 'Register'}
               </button>
@@ -248,10 +240,7 @@ const Register = () => {
 
           <p className='text-center text-sm mt-6'>
             Already have an account?{' '}
-            <span
-              onClick={() => navigate('/login')}
-              className='text-red-700 cursor-pointer font-semibold'
-            >
+            <span onClick={() => navigate('/login')} className='text-red-700 cursor-pointer font-semibold'>
               Login
             </span>
           </p>
