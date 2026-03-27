@@ -1,47 +1,84 @@
 import { useState } from 'react';
-import { Package, ChevronRight, X, CheckCircle, Truck, Clock, ShoppingBag } from 'lucide-react';
+import {
+  CheckCircle,
+  ChevronRight,
+  Clock3,
+  Package,
+  Truck,
+  X,
+} from 'lucide-react';
 
-const STATUS_CONFIG = {
-  Pending:   { color: 'bg-amber-100 text-amber-700',   dot: 'bg-amber-500',   icon: <Clock size={14} /> },
-  Accepted:  { color: 'bg-blue-100 text-blue-700',     dot: 'bg-blue-500',    icon: <CheckCircle size={14} /> },
-  Shipped:   { color: 'bg-purple-100 text-purple-700', dot: 'bg-purple-500',  icon: <Truck size={14} /> },
-  Delivered: { color: 'bg-emerald-100 text-emerald-700', dot: 'bg-emerald-500', icon: <CheckCircle size={14} /> },
+const STATUS_STYLES = {
+  Pending: 'bg-amber-100 text-amber-700',
+  Accepted: 'bg-blue-100 text-blue-700',
+  Shipped: 'bg-violet-100 text-violet-700',
+  Delivered: 'bg-emerald-100 text-emerald-700',
 };
 
-const TIMELINE_STEPS = ['Pending', 'Accepted', 'Shipped', 'Delivered'];
+const ORDER_STEPS = ['Pending', 'Accepted', 'Shipped', 'Delivered'];
 
 const ORDERS = [
-  { id: 'MP-2024-001', product: 'Peacock Motif Paithani', seller: 'Artisan Ravi',   price: '₹14,500', status: 'Delivered', date: '10 Jan 2024' },
-  { id: 'MP-2024-002', product: 'Bridal Gold Border',     seller: 'Weaver Sunita',  price: '₹28,000', status: 'Shipped',   date: '15 Jan 2024' },
-  { id: 'MP-2024-003', product: 'Lotus Pallu Design',     seller: 'Artisan Mohan',  price: '₹11,200', status: 'Accepted',  date: '18 Jan 2024' },
-  { id: 'MP-2024-004', product: 'Classic Yeola Silk',     seller: 'Weaver Priya',   price: '₹19,500', status: 'Pending',   date: '20 Jan 2024' },
+  {
+    id: 'MP-2026-001',
+    product: 'Peacock Motif Paithani',
+    seller: 'Ravi Handlooms',
+    price: 'Rs 14,500',
+    status: 'Delivered',
+    date: '10 Mar 2026',
+  },
+  {
+    id: 'MP-2026-002',
+    product: 'Bridal Gold Border',
+    seller: 'Sunita Weaves',
+    price: 'Rs 28,000',
+    status: 'Shipped',
+    date: '18 Mar 2026',
+  },
+  {
+    id: 'MP-2026-003',
+    product: 'Lotus Pallu Design',
+    seller: 'Mohan Silk House',
+    price: 'Rs 11,200',
+    status: 'Accepted',
+    date: '21 Mar 2026',
+  },
 ];
 
 const TrackingTimeline = ({ status }) => {
-  const currentIdx = TIMELINE_STEPS.indexOf(status);
+  const activeIndex = ORDER_STEPS.indexOf(status);
+
   return (
-    <div className="mt-5">
-      <p className="text-xs font-bold uppercase tracking-widest text-[#9b7b69] mb-4">Order Tracking</p>
-      <div className="relative flex items-start justify-between">
-        {/* Progress line */}
-        <div className="absolute top-4 left-0 right-0 h-0.5 bg-[#f0e4de]" />
+    <div className='mt-5'>
+      <div className='relative flex items-start justify-between gap-2'>
+        <div className='absolute left-0 right-0 top-4 h-0.5 bg-[#f1e2d8]' />
         <div
-          className="absolute top-4 left-0 h-0.5 bg-gradient-to-r from-[#7a1e2c] to-[#c28b1e] transition-all duration-500"
-          style={{ width: `${(currentIdx / (TIMELINE_STEPS.length - 1)) * 100}%` }}
+          className='absolute left-0 top-4 h-0.5 bg-[#7a1e2c]'
+          style={{ width: `${(activeIndex / (ORDER_STEPS.length - 1)) * 100}%` }}
         />
-        {TIMELINE_STEPS.map((step, i) => {
-          const done = i <= currentIdx;
+
+        {ORDER_STEPS.map((step, index) => {
+          const isDone = index <= activeIndex;
+
           return (
-            <div key={step} className="relative flex flex-col items-center gap-2 z-10">
-              <div className={[
-                'flex h-8 w-8 items-center justify-center rounded-full border-2 transition',
-                done
-                  ? 'border-[#7a1e2c] bg-[#7a1e2c] text-white'
-                  : 'border-[#e9d7cf] bg-white text-[#9b7b69]',
-              ].join(' ')}>
-                {done ? <CheckCircle size={14} /> : <div className="h-2 w-2 rounded-full bg-[#e9d7cf]" />}
+            <div key={step} className='relative z-10 flex flex-1 flex-col items-center gap-2'>
+              <div
+                className={[
+                  'flex h-8 w-8 items-center justify-center rounded-full border-2 text-xs font-bold',
+                  isDone
+                    ? 'border-[#7a1e2c] bg-[#7a1e2c] text-white'
+                    : 'border-[#ead9cf] bg-white text-[#a6806f]',
+                ].join(' ')}
+              >
+                {isDone ? <CheckCircle size={14} /> : index + 1}
               </div>
-              <span className={`text-[10px] font-semibold ${done ? 'text-[#7a1e2c]' : 'text-[#9b7b69]'}`}>{step}</span>
+              <span
+                className={[
+                  'text-[10px] font-semibold',
+                  isDone ? 'text-[#7a1e2c]' : 'text-[#a6806f]',
+                ].join(' ')}
+              >
+                {step}
+              </span>
             </div>
           );
         })}
@@ -51,76 +88,118 @@ const TrackingTimeline = ({ status }) => {
 };
 
 const Orders = () => {
-  const [selected, setSelected] = useState(null);
+  const [selectedOrder, setSelectedOrder] = useState(null);
 
   return (
-    <div>
-      <h1 className="text-2xl font-bold text-[#3d1e17] mb-6">My Orders</h1>
+    <div className='space-y-6'>
+      <section className='rounded-[32px] border border-[#efdcd2] bg-white p-6 shadow-[0_18px_45px_rgba(94,35,23,0.08)]'>
+        <div className='flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between'>
+          <div>
+            <p className='text-xs font-semibold uppercase tracking-[0.24em] text-[#a6806f]'>
+              Order center
+            </p>
+            <h1 className='mt-2 text-3xl font-bold text-[#34160f]'>Track every customer order</h1>
+            <p className='mt-3 text-sm leading-7 text-[#8b6759]'>
+              Order tracking is now presented as a buyer journey, with clear states for mobile and desktop.
+            </p>
+          </div>
 
-      {/* Detail modal */}
-      {selected && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setSelected(null)} />
-          <div className="relative w-full max-w-lg rounded-[28px] bg-white p-6 shadow-2xl">
-            <div className="flex items-center justify-between mb-4">
-              <p className="font-bold text-[#3d1e17]">Order {selected.id}</p>
-              <button onClick={() => setSelected(null)} className="flex h-8 w-8 items-center justify-center rounded-full bg-[#f7f1ed] text-[#6a4a42]">
+          <div className='flex flex-wrap gap-2'>
+            <span className='inline-flex items-center gap-2 rounded-full bg-[#fff1e7] px-3 py-2 text-xs font-semibold text-[#7a1e2c]'>
+              <Package size={13} />
+              {ORDERS.length} active orders
+            </span>
+            <span className='inline-flex items-center gap-2 rounded-full bg-[#fff6df] px-3 py-2 text-xs font-semibold text-[#9b6a08]'>
+              <Truck size={13} />
+              Live tracking
+            </span>
+          </div>
+        </div>
+      </section>
+
+      {selectedOrder ? (
+        <div className='fixed inset-0 z-50 flex items-center justify-center p-4'>
+          <button
+            type='button'
+            className='absolute inset-0 bg-black/40 backdrop-blur-sm'
+            onClick={() => setSelectedOrder(null)}
+            aria-label='Close order details'
+          />
+
+          <div className='relative w-full max-w-2xl rounded-[32px] bg-white p-6 shadow-[0_28px_80px_rgba(0,0,0,0.18)]'>
+            <div className='flex items-center justify-between gap-3'>
+              <div>
+                <p className='text-xs font-semibold uppercase tracking-[0.24em] text-[#a6806f]'>
+                  Order details
+                </p>
+                <h2 className='mt-2 text-2xl font-bold text-[#34160f]'>{selectedOrder.id}</h2>
+              </div>
+              <button
+                type='button'
+                onClick={() => setSelectedOrder(null)}
+                className='flex h-10 w-10 items-center justify-center rounded-full bg-[#f7efe8] text-[#7a1e2c]'
+              >
                 <X size={16} />
               </button>
             </div>
-            <div className="flex items-center gap-3 rounded-[18px] bg-[#fff8f3] p-4">
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-[#fff9f4] to-[#fde8d8] text-3xl">🥻</div>
-              <div>
-                <p className="font-semibold text-[#3d1e17]">{selected.product}</p>
-                <p className="text-xs text-[#9b7b69]">{selected.seller}</p>
-                <p className="text-sm font-bold text-[#7a1e2c] mt-1">{selected.price}</p>
+
+            <div className='mt-6 rounded-[24px] bg-[#fffaf6] p-5'>
+              <div className='flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between'>
+                <div>
+                  <p className='text-lg font-bold text-[#34160f]'>{selectedOrder.product}</p>
+                  <p className='mt-1 text-sm text-[#8b6759]'>{selectedOrder.seller}</p>
+                </div>
+                <span className={`rounded-full px-3 py-2 text-xs font-semibold ${STATUS_STYLES[selectedOrder.status]}`}>
+                  {selectedOrder.status}
+                </span>
               </div>
+              <p className='mt-4 text-sm font-semibold text-[#7a1e2c]'>{selectedOrder.price}</p>
             </div>
-            <TrackingTimeline status={selected.status} />
+
+            <TrackingTimeline status={selectedOrder.status} />
           </div>
         </div>
-      )}
+      ) : null}
 
-      <div className="space-y-4">
-        {ORDERS.map((order) => {
-          const cfg = STATUS_CONFIG[order.status];
-          return (
-            <div key={order.id} className="rounded-[22px] border border-[#f0e4de] bg-white p-5 shadow-sm transition hover:shadow-md">
-              <div className="flex items-start gap-4">
-                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#fff9f4] to-[#fde8d8] text-3xl">
-                  🥻
+      <div className='grid gap-4'>
+        {ORDERS.map((order) => (
+          <div
+            key={order.id}
+            className='rounded-[28px] border border-[#efdcd2] bg-white p-5 shadow-[0_18px_45px_rgba(94,35,23,0.08)]'
+          >
+            <div className='flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between'>
+              <div className='flex gap-4'>
+                <div className='flex h-16 w-16 shrink-0 items-center justify-center rounded-[22px] bg-gradient-to-br from-[#fff8f1] via-[#fdecd9] to-[#f7d9c6] text-3xl'>
+                  S
                 </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <p className="font-semibold text-[#3d1e17] text-sm">{order.product}</p>
-                      <p className="text-xs text-[#9b7b69] mt-0.5">{order.seller}</p>
-                    </div>
-                    <span className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold shrink-0 ${cfg.color}`}>
-                      <span className={`h-1.5 w-1.5 rounded-full ${cfg.dot}`} />
-                      {order.status}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between mt-3">
-                    <div>
-                      <p className="text-xs text-[#9b7b69]">Order ID: <span className="font-semibold text-[#3d1e17]">{order.id}</span></p>
-                      <p className="text-xs text-[#9b7b69] mt-0.5">{order.date}</p>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <p className="text-sm font-bold text-[#7a1e2c]">{order.price}</p>
-                      <button
-                        onClick={() => setSelected(order)}
-                        className="flex items-center gap-1 rounded-xl bg-[#fff8f3] border border-[#e9d7cf] px-3 py-1.5 text-xs font-semibold text-[#7a1e2c] transition hover:bg-[#fde8d8]"
-                      >
-                        Details <ChevronRight size={12} />
-                      </button>
-                    </div>
+                <div>
+                  <p className='text-lg font-bold text-[#34160f]'>{order.product}</p>
+                  <p className='mt-1 text-sm text-[#8b6759]'>{order.seller}</p>
+                  <div className='mt-3 flex flex-wrap items-center gap-2 text-xs text-[#8b6759]'>
+                    <span className='font-semibold text-[#34160f]'>{order.id}</span>
+                    <span>Placed on {order.date}</span>
                   </div>
                 </div>
               </div>
+
+              <div className='flex flex-col gap-3 sm:flex-row sm:items-center'>
+                <span className={`inline-flex items-center gap-2 rounded-full px-3 py-2 text-xs font-semibold ${STATUS_STYLES[order.status]}`}>
+                  {order.status === 'Pending' ? <Clock3 size={13} /> : <CheckCircle size={13} />}
+                  {order.status}
+                </span>
+                <p className='text-lg font-bold text-[#7a1e2c]'>{order.price}</p>
+                <button
+                  type='button'
+                  onClick={() => setSelectedOrder(order)}
+                  className='inline-flex items-center gap-2 rounded-full border border-[#ead9cf] bg-[#fffaf6] px-4 py-2 text-sm font-semibold text-[#7a1e2c]'
+                >
+                  View tracking
+                  <ChevronRight size={14} />
+                </button>
+              </div>
             </div>
-          );
-        })}
+          </div>
+        ))}
       </div>
     </div>
   );

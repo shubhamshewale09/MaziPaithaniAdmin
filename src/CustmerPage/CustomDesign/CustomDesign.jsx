@@ -1,48 +1,74 @@
 import { useState } from 'react';
-import { Upload, Send, Palette } from 'lucide-react';
-import { showApiSuccess, showApiError } from '../../Utils/Utils';
+import { Palette, Send, Upload } from 'lucide-react';
+
+import { showApiError, showApiSuccess } from '../../Utils/Utils';
 import { submitCustomDesignRequest } from '../../ServiceCustmer/CustomDesign/CustomDesignApi';
 
-const DESIGN_TYPES = ['Traditional', 'Bridal', 'Designer', 'Minimalist', 'Custom Motif'];
-const COLOR_PREFS  = ['Red', 'Green', 'Blue', 'Purple', 'Gold', 'Pink', 'Maroon', 'Orange'];
+const DESIGN_TYPES = ['Bridal', 'Traditional', 'Designer', 'Minimal', 'Temple motif'];
+const COLOR_PREFS = ['Maroon', 'Green', 'Pink', 'Purple', 'Gold', 'Blue'];
+
+const inputClassName =
+  'w-full rounded-[18px] border border-[#ead9cf] bg-[#fffaf6] px-4 py-3 text-sm text-[#34160f] outline-none transition focus:border-[#7a1e2c]';
 
 const Field = ({ label, required, children }) => (
   <div>
-    <label className="block text-sm font-semibold text-[#3d1e17] mb-1.5">
-      {label} {required && <span className="text-[#7a1e2c]">*</span>}
+    <label className='mb-2 block text-sm font-semibold text-[#34160f]'>
+      {label} {required ? <span className='text-[#7a1e2c]'>*</span> : null}
     </label>
     {children}
   </div>
 );
 
-const inputCls = 'w-full rounded-xl border border-[#e9d7cf] bg-white px-4 py-2.5 text-sm text-[#3d1e17] placeholder-[#b8a09a] outline-none focus:border-[#7a1e2c] focus:ring-1 focus:ring-[#7a1e2c] transition';
-
 const CustomDesign = () => {
   const [form, setForm] = useState({
-    designType: '', colorPrefs: [], budgetMin: '', budgetMax: '',
-    timeline: '', notes: '', images: [],
+    designType: '',
+    colorPrefs: [],
+    budgetMin: '',
+    budgetMax: '',
+    timeline: '',
+    notes: '',
+    images: [],
   });
   const [loading, setLoading] = useState(false);
 
-  const set = (key, val) => setForm((p) => ({ ...p, [key]: val }));
+  const updateField = (key, value) =>
+    setForm((prev) => ({
+      ...prev,
+      [key]: value,
+    }));
 
-  const toggleColor = (c) =>
-    set('colorPrefs', form.colorPrefs.includes(c)
-      ? form.colorPrefs.filter((x) => x !== c)
-      : [...form.colorPrefs, c]);
+  const toggleColor = (value) => {
+    updateField(
+      'colorPrefs',
+      form.colorPrefs.includes(value)
+        ? form.colorPrefs.filter((item) => item !== value)
+        : [...form.colorPrefs, value],
+    );
+  };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+
     if (!form.designType || !form.budgetMin || !form.timeline) {
       showApiError('Please fill all required fields.');
       return;
     }
+
     setLoading(true);
+
     try {
       await submitCustomDesignRequest(form);
-      showApiSuccess('Custom design request submitted successfully!');
-      setForm({ designType: '', colorPrefs: [], budgetMin: '', budgetMax: '', timeline: '', notes: '', images: [] });
-    } catch {
+      showApiSuccess('Custom design request submitted successfully.');
+      setForm({
+        designType: '',
+        colorPrefs: [],
+        budgetMin: '',
+        budgetMax: '',
+        timeline: '',
+        notes: '',
+        images: [],
+      });
+    } catch (error) {
       showApiError('Failed to submit request. Please try again.');
     } finally {
       setLoading(false);
@@ -50,130 +76,183 @@ const CustomDesign = () => {
   };
 
   return (
-    <div className="max-w-2xl mx-auto">
-      {/* Header */}
-      <div className="flex items-center gap-4 mb-8">
-        <div className="flex h-14 w-14 items-center justify-center rounded-[20px] bg-gradient-to-br from-[#7a1e2c] to-[#c28b1e] text-white shadow-lg">
-          <Palette size={24} />
-        </div>
-        <div>
-          <h1 className="text-2xl font-bold text-[#3d1e17]">Custom Design Request</h1>
-          <p className="text-sm text-[#9b7b69] mt-0.5">Tell artisans exactly what you want</p>
-        </div>
-      </div>
-
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Design Type */}
-        <div className="rounded-[22px] border border-[#f0e4de] bg-white p-6 shadow-sm space-y-5">
-          <p className="text-xs font-bold uppercase tracking-widest text-[#9b7b69]">Design Preferences</p>
-
-          <Field label="Design Type" required>
-            <select
-              value={form.designType}
-              onChange={(e) => set('designType', e.target.value)}
-              className={inputCls}
-            >
-              <option value="">Select design type</option>
-              {DESIGN_TYPES.map((d) => <option key={d} value={d}>{d}</option>)}
-            </select>
-          </Field>
-
-          <Field label="Color Preferences">
-            <div className="flex flex-wrap gap-2 mt-1">
-              {COLOR_PREFS.map((c) => (
-                <button
-                  key={c} type="button"
-                  onClick={() => toggleColor(c)}
-                  className={[
-                    'rounded-xl border px-3 py-1.5 text-xs font-medium transition',
-                    form.colorPrefs.includes(c)
-                      ? 'border-[#7a1e2c] bg-[#7a1e2c] text-white'
-                      : 'border-[#e9d7cf] bg-white text-[#6a4a42] hover:border-[#7a1e2c]',
-                  ].join(' ')}
-                >
-                  {c}
-                </button>
-              ))}
-            </div>
-          </Field>
-        </div>
-
-        {/* Budget & Timeline */}
-        <div className="rounded-[22px] border border-[#f0e4de] bg-white p-6 shadow-sm space-y-5">
-          <p className="text-xs font-bold uppercase tracking-widest text-[#9b7b69]">Budget & Timeline</p>
-
-          <div className="grid grid-cols-2 gap-4">
-            <Field label="Min Budget (₹)" required>
-              <input
-                type="number" placeholder="e.g. 10000"
-                value={form.budgetMin}
-                onChange={(e) => set('budgetMin', e.target.value)}
-                className={inputCls}
-              />
-            </Field>
-            <Field label="Max Budget (₹)">
-              <input
-                type="number" placeholder="e.g. 25000"
-                value={form.budgetMax}
-                onChange={(e) => set('budgetMax', e.target.value)}
-                className={inputCls}
-              />
-            </Field>
+    <div className='space-y-6'>
+      <section className='rounded-[32px] border border-[#efdcd2] bg-gradient-to-br from-[#5a1220] via-[#7a1e2c] to-[#2f0c12] p-6 text-white shadow-[0_28px_80px_rgba(66,18,28,0.22)] sm:p-8'>
+        <div className='flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between'>
+          <div className='max-w-2xl'>
+            <p className='text-xs font-semibold uppercase tracking-[0.3em] text-[#f5d47c]'>
+              Custom Request
+            </p>
+            <h1 className='mt-3 text-3xl font-bold sm:text-4xl'>
+              Design a Paithani that matches your occasion.
+            </h1>
+            <p className='mt-4 text-sm leading-7 text-white/75'>
+              Share your colors, motif idea, budget, and delivery need. This page
+              is now shaped for the customer journey instead of an admin form.
+            </p>
           </div>
 
-          <Field label="Delivery Timeline" required>
-            <select
-              value={form.timeline}
-              onChange={(e) => set('timeline', e.target.value)}
-              className={inputCls}
-            >
-              <option value="">Select timeline</option>
-              <option value="1month">Within 1 Month</option>
-              <option value="2months">1–2 Months</option>
-              <option value="3months">2–3 Months</option>
-              <option value="flexible">Flexible</option>
-            </select>
-          </Field>
+          <div className='rounded-[24px] bg-white/10 p-5 backdrop-blur-sm'>
+            <div className='flex h-14 w-14 items-center justify-center rounded-2xl bg-[#f5d47c] text-[#5a1220]'>
+              <Palette size={24} />
+            </div>
+            <p className='mt-4 text-sm font-semibold'>Popular requests</p>
+            <p className='mt-1 text-sm text-white/70'>Wedding tones, peacock pallu, blouse pairing</p>
+          </div>
+        </div>
+      </section>
+
+      <form onSubmit={handleSubmit} className='grid gap-6 xl:grid-cols-[1fr_340px]'>
+        <div className='space-y-6'>
+          <section className='rounded-[30px] border border-[#efdcd2] bg-white p-6 shadow-[0_18px_45px_rgba(94,35,23,0.08)]'>
+            <p className='text-xs font-semibold uppercase tracking-[0.24em] text-[#a6806f]'>
+              Design preferences
+            </p>
+            <div className='mt-5 grid gap-5 md:grid-cols-2'>
+              <Field label='Design type' required>
+                <select
+                  value={form.designType}
+                  onChange={(event) => updateField('designType', event.target.value)}
+                  className={inputClassName}
+                >
+                  <option value=''>Select a design</option>
+                  {DESIGN_TYPES.map((item) => (
+                    <option key={item} value={item}>
+                      {item}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+
+              <Field label='Preferred timeline' required>
+                <select
+                  value={form.timeline}
+                  onChange={(event) => updateField('timeline', event.target.value)}
+                  className={inputClassName}
+                >
+                  <option value=''>Select a timeline</option>
+                  <option value='within-1-month'>Within 1 month</option>
+                  <option value='1-2-months'>1 to 2 months</option>
+                  <option value='2-3-months'>2 to 3 months</option>
+                  <option value='flexible'>Flexible</option>
+                </select>
+              </Field>
+            </div>
+
+            <div className='mt-5'>
+              <Field label='Color preferences'>
+                <div className='flex flex-wrap gap-2'>
+                  {COLOR_PREFS.map((item) => (
+                    <button
+                      key={item}
+                      type='button'
+                      onClick={() => toggleColor(item)}
+                      className={[
+                        'rounded-full border px-4 py-2 text-sm font-semibold transition',
+                        form.colorPrefs.includes(item)
+                          ? 'border-[#7a1e2c] bg-[#7a1e2c] text-white'
+                          : 'border-[#ead9cf] bg-[#fffaf6] text-[#6b5048]',
+                      ].join(' ')}
+                    >
+                      {item}
+                    </button>
+                  ))}
+                </div>
+              </Field>
+            </div>
+          </section>
+
+          <section className='rounded-[30px] border border-[#efdcd2] bg-white p-6 shadow-[0_18px_45px_rgba(94,35,23,0.08)]'>
+            <p className='text-xs font-semibold uppercase tracking-[0.24em] text-[#a6806f]'>
+              Budget details
+            </p>
+            <div className='mt-5 grid gap-5 md:grid-cols-2'>
+              <Field label='Minimum budget' required>
+                <input
+                  type='number'
+                  value={form.budgetMin}
+                  onChange={(event) => updateField('budgetMin', event.target.value)}
+                  placeholder='10000'
+                  className={inputClassName}
+                />
+              </Field>
+
+              <Field label='Maximum budget'>
+                <input
+                  type='number'
+                  value={form.budgetMax}
+                  onChange={(event) => updateField('budgetMax', event.target.value)}
+                  placeholder='25000'
+                  className={inputClassName}
+                />
+              </Field>
+            </div>
+
+            <div className='mt-5'>
+              <Field label='Notes for the artisan'>
+                <textarea
+                  rows={5}
+                  value={form.notes}
+                  onChange={(event) => updateField('notes', event.target.value)}
+                  placeholder='Tell us about motif ideas, wedding colors, blouse style, or any reference you have in mind.'
+                  className={`${inputClassName} resize-none`}
+                />
+              </Field>
+            </div>
+          </section>
         </div>
 
-        {/* Notes & Images */}
-        <div className="rounded-[22px] border border-[#f0e4de] bg-white p-6 shadow-sm space-y-5">
-          <p className="text-xs font-bold uppercase tracking-widest text-[#9b7b69]">Additional Details</p>
-
-          <Field label="Additional Notes">
-            <textarea
-              rows={4}
-              placeholder="Describe your design vision, special requirements, occasion..."
-              value={form.notes}
-              onChange={(e) => set('notes', e.target.value)}
-              className={`${inputCls} resize-none`}
-            />
-          </Field>
-
-          <Field label="Upload Reference Images">
-            <label className="flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed border-[#e9d7cf] bg-[#fff8f3] p-8 cursor-pointer transition hover:border-[#7a1e2c]">
-              <Upload size={24} className="text-[#9b7b69]" />
-              <div className="text-center">
-                <p className="text-sm font-medium text-[#3d1e17]">Click to upload images</p>
-                <p className="text-xs text-[#9b7b69] mt-1">PNG, JPG up to 5MB each</p>
-              </div>
-              <input type="file" multiple accept="image/*" className="hidden"
-                onChange={(e) => set('images', Array.from(e.target.files))} />
+        <div className='space-y-6'>
+          <section className='rounded-[30px] border border-[#efdcd2] bg-white p-6 shadow-[0_18px_45px_rgba(94,35,23,0.08)]'>
+            <p className='text-xs font-semibold uppercase tracking-[0.24em] text-[#a6806f]'>
+              Upload reference
+            </p>
+            <label className='mt-5 flex cursor-pointer flex-col items-center justify-center rounded-[24px] border-2 border-dashed border-[#e3cfc3] bg-[#fffaf6] px-6 py-10 text-center transition hover:border-[#7a1e2c]'>
+              <Upload size={28} className='text-[#7a1e2c]' />
+              <p className='mt-4 text-sm font-semibold text-[#34160f]'>
+                Add inspiration images
+              </p>
+              <p className='mt-2 text-xs leading-6 text-[#8b6759]'>
+                Upload blouse references, color cards, or motif screenshots.
+              </p>
+              <input
+                type='file'
+                multiple
+                accept='image/*'
+                className='hidden'
+                onChange={(event) =>
+                  updateField('images', Array.from(event.target.files || []))
+                }
+              />
             </label>
-            {form.images.length > 0 && (
-              <p className="text-xs text-[#7a1e2c] mt-2 font-medium">{form.images.length} file(s) selected</p>
-            )}
-          </Field>
-        </div>
 
-        <button
-          type="submit"
-          disabled={loading}
-          className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#7a1e2c] to-[#a52b39] py-3.5 text-sm font-bold text-white shadow-lg transition hover:opacity-90 disabled:opacity-60"
-        >
-          <Send size={16} />
-          {loading ? 'Submitting...' : 'Submit Custom Design Request'}
-        </button>
+            {form.images.length > 0 ? (
+              <p className='mt-4 text-sm font-semibold text-[#7a1e2c]'>
+                {form.images.length} image(s) selected
+              </p>
+            ) : null}
+          </section>
+
+          <section className='rounded-[30px] border border-[#efdcd2] bg-[#fff6df] p-6 shadow-[0_18px_45px_rgba(94,35,23,0.06)]'>
+            <p className='text-xs font-semibold uppercase tracking-[0.24em] text-[#9b6a08]'>
+              Before you submit
+            </p>
+            <ul className='mt-4 space-y-3 text-sm leading-7 text-[#6b5048]'>
+              <li>Include your delivery timeline if the saree is for a wedding or event.</li>
+              <li>Share at least one preferred color so the artisan can suggest matching zari work.</li>
+              <li>Reference images make it much easier to quote accurately.</li>
+            </ul>
+
+            <button
+              type='submit'
+              disabled={loading}
+              className='mt-6 inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#7a1e2c] px-5 py-3.5 text-sm font-bold text-white disabled:opacity-60'
+            >
+              <Send size={16} />
+              {loading ? 'Submitting...' : 'Submit request'}
+            </button>
+          </section>
+        </div>
       </form>
     </div>
   );

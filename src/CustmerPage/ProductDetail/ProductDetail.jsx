@@ -1,186 +1,277 @@
-import { useState } from 'react';
-import { Star, Heart, ShoppingCart, Zap, Palette, MapPin, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import {
+  ChevronLeft,
+  ChevronRight,
+  Heart,
+  MapPin,
+  Palette,
+  ShieldCheck,
+  ShoppingBag,
+  Sparkles,
+  Star,
+  Truck,
+  Zap,
+} from 'lucide-react';
 
-const IMAGES = ['🥻', '🪡', '✨', '🎨'];
+const GALLERY = ['S', 'P', 'Z', 'M'];
 
 const REVIEWS = [
-  { id: 1, name: 'Priya S.',   rating: 5, comment: 'Absolutely stunning saree! The quality is exceptional.', date: '12 Jan 2024' },
-  { id: 2, name: 'Meera K.',   rating: 4, comment: 'Beautiful craftsmanship. Delivery was on time.', date: '8 Jan 2024' },
-  { id: 3, name: 'Anita R.',   rating: 5, comment: 'Worth every rupee. The pallu design is gorgeous.', date: '2 Jan 2024' },
+  {
+    id: 1,
+    name: 'Priya S.',
+    rating: 5,
+    comment: 'The zari work is beautiful and the saree felt premium from the first look.',
+    date: '12 Jan 2024',
+  },
+  {
+    id: 2,
+    name: 'Meera K.',
+    rating: 4,
+    comment: 'Very elegant color and helpful seller communication during dispatch.',
+    date: '8 Jan 2024',
+  },
+  {
+    id: 3,
+    name: 'Anita R.',
+    rating: 5,
+    comment: 'Perfect for wedding shopping. The pallu detailing looked even better in person.',
+    date: '2 Jan 2024',
+  },
 ];
 
-const ProductDetail = ({ product, onBack, onAddToCart }) => {
-  const [activeImg, setActiveImg] = useState(0);
-  const [qty, setQty] = useState(1);
+const DetailPill = ({ icon: Icon, children }) => (
+  <span className='inline-flex items-center gap-2 rounded-full bg-[#fff1e7] px-3 py-2 text-xs font-semibold text-[#7a1e2c]'>
+    <Icon size={13} />
+    {children}
+  </span>
+);
 
-  const p = product || {
-    name: 'Peacock Motif Paithani',
-    price: '₹12,500 – ₹18,000',
-    description: 'A masterpiece of traditional Paithani weaving featuring intricate peacock motifs on pure silk. Each saree is handwoven by skilled artisans from Yeola, taking 3–6 months to complete.',
-    seller: 'Ravi Handlooms',
-    shop: 'Ravi Silk Emporium',
-    location: 'Yeola, Nashik',
-    rating: 4.8,
-    reviews: 128,
-    attributes: {
-      Border: 'Gold Zari',
-      Pallu: 'Peacock Motif',
-      Motifs: 'Peacock, Lotus',
-      Color: 'Deep Green',
-      Fabric: 'Pure Silk',
-      Length: '5.5 meters',
-    },
-  };
+const ProductDetail = ({ product, onBack, onAddToCart, onBuyNow, onCustomRequest }) => {
+  const [activeImage, setActiveImage] = useState(0);
+  const [quantity, setQuantity] = useState(1);
+
+  const details = useMemo(
+    () => ({
+      name: product?.name || 'Peacock Motif Paithani',
+      price: product?.price || 'Rs 14,500 - Rs 18,000',
+      seller: product?.seller || 'Ravi Handlooms',
+      rating: product?.rating || 4.8,
+      location: product?.location || 'Yeola, Nashik',
+      description:
+        'A handcrafted Paithani saree woven with rich zari work, a statement pallu, and festive-ready silk texture for bridal and special-occasion shopping.',
+      attributes: {
+        Fabric: product?.fabric || 'Pure Silk',
+        Color: product?.color || 'Emerald Green',
+        Design: product?.design || 'Traditional',
+        Border: 'Rich Gold Zari',
+        Blouse: 'Matching blouse piece included',
+        Delivery: 'Ships in 4-6 days',
+      },
+    }),
+    [product],
+  );
 
   return (
-    <div>
+    <div className='space-y-6 sm:space-y-8'>
       <button
+        type='button'
         onClick={onBack}
-        className="flex items-center gap-2 text-sm font-medium text-[#7a1e2c] mb-6 hover:underline"
+        className='inline-flex items-center gap-2 rounded-full border border-[#ead9cf] bg-white px-4 py-2 text-sm font-semibold text-[#7a1e2c]'
       >
-        <ChevronLeft size={16} /> Back to Products
+        <ChevronLeft size={15} />
+        Back to collection
       </button>
 
-      <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
-        {/* Image Gallery */}
-        <div>
-          <div className="relative overflow-hidden rounded-[28px] bg-gradient-to-br from-[#fff9f4] to-[#fde8d8] flex items-center justify-center h-80 sm:h-96 shadow-md">
-            <span className="text-[120px]">{IMAGES[activeImg]}</span>
+      <section className='grid gap-6 xl:grid-cols-[1.05fr_0.95fr]'>
+        <div className='space-y-4'>
+          <div className='relative overflow-hidden rounded-[32px] border border-[#efdcd2] bg-gradient-to-br from-[#fff8f1] via-[#fdecd9] to-[#f7d9c6] p-5 shadow-[0_22px_60px_rgba(94,35,23,0.1)]'>
+            <div className='flex h-[360px] items-center justify-center rounded-[28px] border border-white/50 bg-white/30 text-8xl shadow-inner sm:h-[460px]'>
+              {GALLERY[activeImage]}
+            </div>
+
             <button
-              onClick={() => setActiveImg((p) => (p - 1 + IMAGES.length) % IMAGES.length)}
-              className="absolute left-3 flex h-9 w-9 items-center justify-center rounded-full bg-white/80 shadow transition hover:bg-white"
+              type='button'
+              onClick={() =>
+                setActiveImage((prev) => (prev - 1 + GALLERY.length) % GALLERY.length)
+              }
+              className='absolute left-8 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-[#7a1e2c] shadow-sm'
             >
-              <ChevronLeft size={16} />
+              <ChevronLeft size={18} />
             </button>
             <button
-              onClick={() => setActiveImg((p) => (p + 1) % IMAGES.length)}
-              className="absolute right-3 flex h-9 w-9 items-center justify-center rounded-full bg-white/80 shadow transition hover:bg-white"
+              type='button'
+              onClick={() => setActiveImage((prev) => (prev + 1) % GALLERY.length)}
+              className='absolute right-8 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-[#7a1e2c] shadow-sm'
             >
-              <ChevronRight size={16} />
+              <ChevronRight size={18} />
             </button>
           </div>
-          <div className="flex gap-3 mt-4">
-            {IMAGES.map((img, i) => (
+
+          <div className='grid grid-cols-4 gap-3'>
+            {GALLERY.map((item, index) => (
               <button
-                key={i}
-                onClick={() => setActiveImg(i)}
+                key={item}
+                type='button'
+                onClick={() => setActiveImage(index)}
                 className={[
-                  'flex h-16 w-16 items-center justify-center rounded-2xl border-2 text-2xl transition',
-                  activeImg === i ? 'border-[#7a1e2c] bg-[#fff8f3]' : 'border-[#f0e4de] bg-white',
+                  'flex h-20 items-center justify-center rounded-[22px] border text-2xl font-bold transition sm:h-24',
+                  activeImage === index
+                    ? 'border-[#7a1e2c] bg-[#fff1e7] text-[#7a1e2c]'
+                    : 'border-[#ead9cf] bg-white text-[#8b6759]',
                 ].join(' ')}
               >
-                {img}
+                {item}
               </button>
             ))}
           </div>
         </div>
 
-        {/* Details */}
-        <div className="space-y-5">
-          <div>
-            <h1 className="text-2xl font-bold text-[#3d1e17] sm:text-3xl">{p.name}</h1>
-            <div className="flex items-center gap-3 mt-2">
-              <div className="flex items-center gap-1 text-[#c28b1e]">
-                {[...Array(5)].map((_, i) => (
-                  <Star key={i} size={14} fill={i < Math.floor(p.rating) ? 'currentColor' : 'none'} />
-                ))}
-              </div>
-              <span className="text-sm font-semibold text-[#3d1e17]">{p.rating}</span>
-              <span className="text-xs text-[#9b7b69]">({p.reviews} reviews)</span>
+        <div className='space-y-5'>
+          <section className='rounded-[32px] border border-[#efdcd2] bg-white p-6 shadow-[0_22px_60px_rgba(94,35,23,0.08)]'>
+            <div className='flex flex-wrap gap-2'>
+              <DetailPill icon={Sparkles}>Customer favourite</DetailPill>
+              <DetailPill icon={ShieldCheck}>Authentic artisan listing</DetailPill>
             </div>
-            <p className="mt-3 text-2xl font-bold text-[#7a1e2c]">{p.price}</p>
-          </div>
 
-          <p className="text-sm leading-7 text-[#6a4a42]">{p.description}</p>
+            <h1 className='mt-4 text-3xl font-bold text-[#34160f] sm:text-4xl'>
+              {details.name}
+            </h1>
 
-          {/* Attributes */}
-          <div className="rounded-[20px] border border-[#f0e4de] bg-[#fff8f3] p-4">
-            <p className="text-xs font-bold uppercase tracking-widest text-[#9b7b69] mb-3">Design Attributes</p>
-            <div className="grid grid-cols-2 gap-2">
-              {Object.entries(p.attributes).map(([key, val]) => (
-                <div key={key} className="flex flex-col">
-                  <span className="text-[10px] uppercase tracking-wider text-[#9b7b69]">{key}</span>
-                  <span className="text-sm font-semibold text-[#3d1e17]">{val}</span>
+            <div className='mt-4 flex flex-wrap items-center gap-3 text-sm text-[#8b6759]'>
+              <span className='flex items-center gap-1 rounded-full bg-[#fff6db] px-3 py-2 font-semibold text-[#9b6a08]'>
+                <Star size={13} fill='currentColor' />
+                {details.rating}
+              </span>
+              <span className='flex items-center gap-1'>
+                <MapPin size={14} />
+                {details.location}
+              </span>
+              <span>Sold by {details.seller}</span>
+            </div>
+
+            <div className='mt-5 rounded-[24px] bg-[#fff7f2] p-5'>
+              <p className='text-xs font-semibold uppercase tracking-[0.24em] text-[#a6806f]'>
+                Price range
+              </p>
+              <p className='mt-2 text-3xl font-bold text-[#7a1e2c]'>{details.price}</p>
+              <p className='mt-2 text-sm leading-7 text-[#8b6759]'>
+                {details.description}
+              </p>
+            </div>
+
+            <div className='mt-5 grid gap-3 sm:grid-cols-2'>
+              {Object.entries(details.attributes).map(([label, value]) => (
+                <div key={label} className='rounded-[22px] border border-[#f1e2d8] bg-[#fffaf6] p-4'>
+                  <p className='text-xs font-semibold uppercase tracking-[0.2em] text-[#a6806f]'>
+                    {label}
+                  </p>
+                  <p className='mt-2 text-sm font-semibold text-[#34160f]'>{value}</p>
                 </div>
               ))}
             </div>
-          </div>
+          </section>
 
-          {/* Seller card */}
-          <div className="rounded-[20px] border border-[#f0e4de] bg-white p-4 shadow-sm">
-            <p className="text-xs font-bold uppercase tracking-widest text-[#9b7b69] mb-3">Seller Information</p>
-            <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-[#c28b1e] to-[#7a1e2c] text-white text-xl shadow">
-                🧵
-              </div>
-              <div>
-                <p className="font-semibold text-[#3d1e17]">{p.seller}</p>
-                <p className="text-xs text-[#9b7b69]">{p.shop}</p>
-                <div className="flex items-center gap-1 mt-0.5 text-[#9b7b69]">
-                  <MapPin size={11} /><span className="text-xs">{p.location}</span>
+          <section className='rounded-[32px] border border-[#efdcd2] bg-white p-6 shadow-[0_22px_60px_rgba(94,35,23,0.08)]'>
+            <div className='flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between'>
+              <div className='flex items-center gap-3'>
+                <div className='flex items-center rounded-full border border-[#ead9cf] bg-[#fffaf6] px-3 py-2'>
+                  <button
+                    type='button'
+                    onClick={() => setQuantity((prev) => Math.max(1, prev - 1))}
+                    className='h-8 w-8 rounded-full text-lg font-bold text-[#7a1e2c]'
+                  >
+                    -
+                  </button>
+                  <span className='w-10 text-center text-sm font-semibold text-[#34160f]'>
+                    {quantity}
+                  </span>
+                  <button
+                    type='button'
+                    onClick={() => setQuantity((prev) => prev + 1)}
+                    className='h-8 w-8 rounded-full text-lg font-bold text-[#7a1e2c]'
+                  >
+                    +
+                  </button>
                 </div>
+                <button
+                  type='button'
+                  className='flex h-11 w-11 items-center justify-center rounded-full border border-[#ead9cf] bg-white text-[#7a1e2c]'
+                >
+                  <Heart size={16} />
+                </button>
               </div>
-              <div className="ml-auto flex items-center gap-1 text-[#c28b1e]">
-                <Star size={13} fill="currentColor" />
-                <span className="text-sm font-bold text-[#3d1e17]">{p.rating}</span>
+
+              <div className='flex items-center gap-2 text-sm text-[#8b6759]'>
+                <Truck size={15} className='text-[#7a1e2c]' />
+                Free shipping on premium orders
               </div>
             </div>
-          </div>
 
-          {/* Qty + Actions */}
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 rounded-xl border border-[#e9d7cf] bg-white px-3 py-2">
-              <button onClick={() => setQty((q) => Math.max(1, q - 1))} className="text-[#7a1e2c] font-bold text-lg w-6">−</button>
-              <span className="w-6 text-center text-sm font-semibold text-[#3d1e17]">{qty}</span>
-              <button onClick={() => setQty((q) => q + 1)} className="text-[#7a1e2c] font-bold text-lg w-6">+</button>
+            <div className='mt-5 grid gap-3 sm:grid-cols-2'>
+              <button
+                type='button'
+                onClick={() => onAddToCart?.(details, quantity)}
+                className='inline-flex items-center justify-center gap-2 rounded-full border border-[#7a1e2c] bg-white px-5 py-3.5 text-sm font-bold text-[#7a1e2c]'
+              >
+                <ShoppingBag size={16} />
+                Add to cart
+              </button>
+              <button
+                type='button'
+                onClick={() => onBuyNow?.(details, quantity)}
+                className='inline-flex items-center justify-center gap-2 rounded-full bg-[#7a1e2c] px-5 py-3.5 text-sm font-bold text-white'
+              >
+                <Zap size={16} />
+                Buy now
+              </button>
             </div>
-            <button className="flex h-9 w-9 items-center justify-center rounded-xl border border-[#e9d7cf] bg-white text-[#7a1e2c] transition hover:bg-[#fff8f3]">
-              <Heart size={16} />
-            </button>
-          </div>
 
-          <div className="flex flex-col gap-3 sm:flex-row">
             <button
-              onClick={() => onAddToCart && onAddToCart(p, qty)}
-              className="flex flex-1 items-center justify-center gap-2 rounded-2xl border-2 border-[#7a1e2c] bg-white py-3 text-sm font-bold text-[#7a1e2c] transition hover:bg-[#fff8f3]"
+              type='button'
+              onClick={() => onCustomRequest?.(details)}
+              className='mt-3 inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#fff6df] px-5 py-3.5 text-sm font-bold text-[#9b6a08]'
             >
-              <ShoppingCart size={16} /> Add to Cart
+              <Palette size={16} />
+              Request customization
             </button>
-            <button className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#7a1e2c] to-[#a52b39] py-3 text-sm font-bold text-white shadow-lg transition hover:opacity-90">
-              <Zap size={16} /> Buy Now
-            </button>
-          </div>
-          <button className="flex w-full items-center justify-center gap-2 rounded-2xl border border-[#c28b1e] bg-[#fffbf0] py-3 text-sm font-bold text-[#c28b1e] transition hover:bg-[#fff3d0]">
-            <Palette size={16} /> Request Customization
-          </button>
+          </section>
         </div>
-      </div>
+      </section>
 
-      {/* Reviews */}
-      <div className="mt-10">
-        <h2 className="text-xl font-bold text-[#3d1e17] mb-5">Customer Reviews</h2>
-        <div className="space-y-4">
-          {REVIEWS.map((r) => (
-            <div key={r.id} className="rounded-[20px] border border-[#f0e4de] bg-white p-5 shadow-sm">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-[#7a1e2c] to-[#c28b1e] text-white text-xs font-bold">
-                    {r.name[0]}
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold text-[#3d1e17]">{r.name}</p>
-                    <p className="text-xs text-[#9b7b69]">{r.date}</p>
-                  </div>
+      <section className='rounded-[32px] border border-[#efdcd2] bg-white p-6 shadow-[0_22px_60px_rgba(94,35,23,0.08)]'>
+        <div className='flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between'>
+          <div>
+            <p className='text-xs font-semibold uppercase tracking-[0.24em] text-[#a6806f]'>
+              Buyer reviews
+            </p>
+            <h2 className='mt-2 text-2xl font-bold text-[#34160f]'>
+              What customers are saying
+            </h2>
+          </div>
+          <span className='rounded-full bg-[#fff6db] px-3 py-2 text-sm font-semibold text-[#9b6a08]'>
+            128 reviews
+          </span>
+        </div>
+
+        <div className='mt-6 grid gap-4 lg:grid-cols-3'>
+          {REVIEWS.map((review) => (
+            <div key={review.id} className='rounded-[24px] bg-[#fff7f2] p-5'>
+              <div className='flex items-center justify-between gap-3'>
+                <div>
+                  <p className='font-semibold text-[#34160f]'>{review.name}</p>
+                  <p className='text-xs text-[#8b6759]'>{review.date}</p>
                 </div>
-                <div className="flex items-center gap-0.5 text-[#c28b1e]">
-                  {[...Array(r.rating)].map((_, i) => <Star key={i} size={12} fill="currentColor" />)}
+                <div className='flex items-center gap-1 text-[#9b6a08]'>
+                  {Array.from({ length: review.rating }).map((_, index) => (
+                    <Star key={index} size={12} fill='currentColor' />
+                  ))}
                 </div>
               </div>
-              <p className="mt-3 text-sm leading-6 text-[#6a4a42]">{r.comment}</p>
+              <p className='mt-4 text-sm leading-7 text-[#6b5048]'>{review.comment}</p>
             </div>
           ))}
         </div>
-      </div>
+      </section>
     </div>
   );
 };

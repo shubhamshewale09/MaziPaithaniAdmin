@@ -142,7 +142,9 @@ const Login = () => {
         login(res);
         showApiSuccess(res?.message || 'Login successful');
 
-        if (res.isSellerProfileComplete === false) {
+        if (Number(res.roleId) === 3) {
+          navigate('/customer-dashboard');
+        } else if (res.isSellerProfileComplete === false) {
           navigate('/dashboard?tab=profile');
         } else {
           navigate('/dashboard');

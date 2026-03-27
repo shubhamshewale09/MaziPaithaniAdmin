@@ -1,215 +1,297 @@
 import { useState } from 'react';
-import { User, MapPin, Heart, Package, LogOut, Edit3, Plus, Star, Trash2 } from 'lucide-react';
+import {
+  Edit3,
+  Heart,
+  LogOut,
+  MapPin,
+  Package,
+  Plus,
+  Star,
+  Trash2,
+  User,
+} from 'lucide-react';
+
 import { showApiSuccess } from '../../Utils/Utils';
 
 const TABS = [
-  { id: 'details',   label: 'Personal Details', icon: <User size={15} /> },
-  { id: 'addresses', label: 'Saved Addresses',  icon: <MapPin size={15} /> },
-  { id: 'wishlist',  label: 'Wishlist',          icon: <Heart size={15} /> },
-  { id: 'history',   label: 'Order History',     icon: <Package size={15} /> },
+  { id: 'details', label: 'Details', icon: User },
+  { id: 'addresses', label: 'Addresses', icon: MapPin },
+  { id: 'wishlist', label: 'Wishlist', icon: Heart },
+  { id: 'history', label: 'Orders', icon: Package },
 ];
 
-const WISHLIST = [
-  { id: 1, name: 'Peacock Motif Paithani', price: '₹14,500', seller: 'Artisan Ravi',  rating: 4.8 },
-  { id: 2, name: 'Bridal Gold Border',     price: '₹28,000', seller: 'Weaver Sunita', rating: 4.9 },
+const INITIAL_WISHLIST = [
+  { id: 1, name: 'Peacock Motif Paithani', seller: 'Ravi Handlooms', price: 'Rs 14,500', rating: 4.8 },
+  { id: 2, name: 'Bridal Gold Border', seller: 'Sunita Weaves', price: 'Rs 28,000', rating: 4.9 },
 ];
 
 const ADDRESSES = [
-  { id: 1, label: 'Home',   address: '12, Shivaji Nagar, Pune – 411005', phone: '98765 43210', default: true },
-  { id: 2, label: 'Office', address: '45, MG Road, Nashik – 422001',     phone: '91234 56789', default: false },
+  { id: 1, label: 'Home', address: '12 Shivaji Nagar, Pune 411005', phone: '9876543210', default: true },
+  { id: 2, label: 'Office', address: '45 MG Road, Nashik 422001', phone: '9123456789', default: false },
 ];
 
 const ORDER_HISTORY = [
-  { id: 'MP-2024-001', product: 'Peacock Motif Paithani', price: '₹14,500', status: 'Delivered', date: '10 Jan 2024' },
-  { id: 'MP-2024-002', product: 'Bridal Gold Border',     price: '₹28,000', status: 'Shipped',   date: '15 Jan 2024' },
+  { id: 'MP-2026-001', product: 'Peacock Motif Paithani', price: 'Rs 14,500', status: 'Delivered', date: '10 Mar 2026' },
+  { id: 'MP-2026-002', product: 'Bridal Gold Border', price: 'Rs 28,000', status: 'Shipped', date: '18 Mar 2026' },
 ];
 
-const STATUS_COLOR = {
+const STATUS_STYLES = {
   Delivered: 'bg-emerald-100 text-emerald-700',
-  Shipped:   'bg-purple-100 text-purple-700',
-  Pending:   'bg-amber-100 text-amber-700',
-  Accepted:  'bg-blue-100 text-blue-700',
+  Shipped: 'bg-violet-100 text-violet-700',
+  Pending: 'bg-amber-100 text-amber-700',
+  Accepted: 'bg-blue-100 text-blue-700',
 };
 
-const inputCls = 'w-full rounded-xl border border-[#e9d7cf] bg-white px-4 py-2.5 text-sm text-[#3d1e17] placeholder-[#b8a09a] outline-none focus:border-[#7a1e2c] focus:ring-1 focus:ring-[#7a1e2c] transition';
+const inputClassName =
+  'w-full rounded-[18px] border border-[#ead9cf] bg-[#fffaf6] px-4 py-3 text-sm text-[#34160f] outline-none transition focus:border-[#7a1e2c]';
 
 const Profile = ({ onLogout }) => {
-  const [tab, setTab]         = useState('details');
-  const [editing, setEditing] = useState(false);
-  const [wishlist, setWishlist] = useState(WISHLIST);
-  const [form, setForm]       = useState({ name: 'Priya Sharma', email: 'priya@example.com', phone: '98765 43210', city: 'Pune' });
+  const [activeTab, setActiveTab] = useState('details');
+  const [isEditing, setIsEditing] = useState(false);
+  const [wishlist, setWishlist] = useState(INITIAL_WISHLIST);
+  const [form, setForm] = useState({
+    name: 'Priya Sharma',
+    email: 'priya@example.com',
+    phone: '9876543210',
+    city: 'Pune',
+  });
 
-  const set = (k, v) => setForm((p) => ({ ...p, [k]: v }));
+  const updateField = (key, value) =>
+    setForm((prev) => ({
+      ...prev,
+      [key]: value,
+    }));
 
-  const saveProfile = () => {
-    setEditing(false);
-    showApiSuccess('Profile updated successfully!');
+  const handleSave = () => {
+    setIsEditing(false);
+    showApiSuccess('Profile updated successfully.');
   };
 
   return (
-    <div>
-      {/* Profile header */}
-      <div className="relative overflow-hidden rounded-[28px] bg-gradient-to-br from-[#5f1320] via-[#7b1d2a] to-[#24090f] p-6 sm:p-8 text-white shadow-xl mb-6">
-        <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-[#c28b1e]/20 blur-3xl" />
-        <div className="relative flex items-center gap-5">
-          <div className="flex h-16 w-16 items-center justify-center rounded-[22px] bg-gradient-to-br from-[#c28b1e] to-[#e0b44b] text-white text-2xl font-bold shadow-lg">
-            {form.name[0]}
+    <div className='space-y-6'>
+      <section className='rounded-[32px] bg-gradient-to-br from-[#5a1220] via-[#7a1e2c] to-[#2f0c12] p-6 text-white shadow-[0_28px_80px_rgba(66,18,28,0.22)] sm:p-8'>
+        <div className='flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between'>
+          <div className='flex items-center gap-4'>
+            <div className='flex h-16 w-16 items-center justify-center rounded-[24px] bg-[#f5d47c] text-2xl font-bold text-[#5a1220] shadow-lg'>
+              {form.name[0]}
+            </div>
+            <div>
+              <p className='text-2xl font-bold'>{form.name}</p>
+              <p className='mt-1 text-sm text-white/75'>{form.email}</p>
+              <p className='mt-2 text-xs font-semibold uppercase tracking-[0.24em] text-[#f5d47c]'>
+                Customer profile
+              </p>
+            </div>
           </div>
-          <div>
-            <p className="text-xl font-bold">{form.name}</p>
-            <p className="text-sm text-white/70 mt-0.5">{form.email}</p>
-            <p className="text-xs text-[#f5d47c] mt-1 uppercase tracking-wider">Premium Member</p>
-          </div>
-        </div>
-      </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[220px_1fr]">
-        {/* Sidebar tabs */}
-        <div className="space-y-1">
-          {TABS.map((t) => (
-            <button
-              key={t.id}
-              onClick={() => setTab(t.id)}
-              className={[
-                'flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition',
-                tab === t.id
-                  ? 'bg-[#7a1e2c] text-white shadow'
-                  : 'text-[#6a4a42] hover:bg-[#fff8f3] hover:text-[#7a1e2c]',
-              ].join(' ')}
-            >
-              {t.icon}{t.label}
-            </button>
-          ))}
           <button
+            type='button'
             onClick={onLogout}
-            className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-red-600 transition hover:bg-red-50 mt-2"
+            className='inline-flex items-center justify-center gap-2 rounded-full border border-white/20 bg-white/10 px-5 py-3 text-sm font-semibold text-white'
           >
-            <LogOut size={15} /> Logout
+            <LogOut size={15} />
+            Logout
           </button>
         </div>
+      </section>
 
-        {/* Tab content */}
-        <div className="rounded-[22px] border border-[#f0e4de] bg-white p-6 shadow-sm">
+      <div className='flex gap-2 overflow-x-auto pb-1'>
+        {TABS.map((item) => {
+          const Icon = item.icon;
+          const isActive = activeTab === item.id;
 
-          {/* Personal Details */}
-          {tab === 'details' && (
-            <div>
-              <div className="flex items-center justify-between mb-5">
-                <p className="font-bold text-[#3d1e17]">Personal Details</p>
-                <button
-                  onClick={() => editing ? saveProfile() : setEditing(true)}
-                  className="flex items-center gap-1.5 rounded-xl border border-[#e9d7cf] px-3 py-1.5 text-xs font-semibold text-[#7a1e2c] transition hover:bg-[#fff8f3]"
-                >
-                  <Edit3 size={12} /> {editing ? 'Save' : 'Edit'}
-                </button>
+          return (
+            <button
+              key={item.id}
+              type='button'
+              onClick={() => setActiveTab(item.id)}
+              className={[
+                'inline-flex shrink-0 items-center gap-2 rounded-full px-4 py-3 text-sm font-semibold transition',
+                isActive
+                  ? 'bg-[#7a1e2c] text-white'
+                  : 'border border-[#ead9cf] bg-white text-[#6b5048]',
+              ].join(' ')}
+            >
+              <Icon size={15} />
+              {item.label}
+            </button>
+          );
+        })}
+      </div>
+
+      <section className='rounded-[32px] border border-[#efdcd2] bg-white p-6 shadow-[0_18px_45px_rgba(94,35,23,0.08)]'>
+        {activeTab === 'details' ? (
+          <div>
+            <div className='flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between'>
+              <div>
+                <p className='text-xs font-semibold uppercase tracking-[0.24em] text-[#a6806f]'>
+                  Personal details
+                </p>
+                <h2 className='mt-2 text-2xl font-bold text-[#34160f]'>Manage your shopper profile</h2>
               </div>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                {[
-                  { label: 'Full Name', key: 'name' },
-                  { label: 'Email',     key: 'email' },
-                  { label: 'Phone',     key: 'phone' },
-                  { label: 'City',      key: 'city' },
-                ].map(({ label, key }) => (
-                  <div key={key}>
-                    <label className="block text-xs font-semibold text-[#9b7b69] mb-1.5">{label}</label>
-                    {editing
-                      ? <input className={inputCls} value={form[key]} onChange={(e) => set(key, e.target.value)} />
-                      : <p className="text-sm font-medium text-[#3d1e17] rounded-xl border border-[#f0e4de] bg-[#fff8f3] px-4 py-2.5">{form[key]}</p>
-                    }
-                  </div>
-                ))}
-              </div>
+              <button
+                type='button'
+                onClick={() => (isEditing ? handleSave() : setIsEditing(true))}
+                className='inline-flex items-center gap-2 rounded-full border border-[#ead9cf] bg-[#fffaf6] px-4 py-2.5 text-sm font-semibold text-[#7a1e2c]'
+              >
+                <Edit3 size={14} />
+                {isEditing ? 'Save profile' : 'Edit profile'}
+              </button>
             </div>
-          )}
 
-          {/* Saved Addresses */}
-          {tab === 'addresses' && (
-            <div>
-              <div className="flex items-center justify-between mb-5">
-                <p className="font-bold text-[#3d1e17]">Saved Addresses</p>
-                <button className="flex items-center gap-1.5 rounded-xl bg-[#7a1e2c] px-3 py-1.5 text-xs font-semibold text-white transition hover:opacity-90">
-                  <Plus size={12} /> Add New
-                </button>
-              </div>
-              <div className="space-y-3">
-                {ADDRESSES.map((addr) => (
-                  <div key={addr.id} className="rounded-[18px] border border-[#f0e4de] bg-[#fff8f3] p-4">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="rounded-lg bg-[#7a1e2c] px-2 py-0.5 text-[10px] font-bold text-white">{addr.label}</span>
-                        {addr.default && <span className="rounded-lg bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700">Default</span>}
-                      </div>
-                      <button className="text-[#9b7b69] hover:text-red-500 transition"><Trash2 size={14} /></button>
+            <div className='mt-6 grid gap-5 md:grid-cols-2'>
+              {[
+                { key: 'name', label: 'Full name' },
+                { key: 'email', label: 'Email address' },
+                { key: 'phone', label: 'Phone number' },
+                { key: 'city', label: 'City' },
+              ].map((item) => (
+                <div key={item.key}>
+                  <label className='mb-2 block text-sm font-semibold text-[#34160f]'>
+                    {item.label}
+                  </label>
+                  {isEditing ? (
+                    <input
+                      value={form[item.key]}
+                      onChange={(event) => updateField(item.key, event.target.value)}
+                      className={inputClassName}
+                    />
+                  ) : (
+                    <div className='rounded-[18px] bg-[#fffaf6] px-4 py-3 text-sm font-semibold text-[#34160f]'>
+                      {form[item.key]}
                     </div>
-                    <p className="text-sm text-[#3d1e17] mt-2">{addr.address}</p>
-                    <p className="text-xs text-[#9b7b69] mt-1">{addr.phone}</p>
-                  </div>
-                ))}
-              </div>
+                  )}
+                </div>
+              ))}
             </div>
-          )}
+          </div>
+        ) : null}
 
-          {/* Wishlist */}
-          {tab === 'wishlist' && (
-            <div>
-              <p className="font-bold text-[#3d1e17] mb-5">My Wishlist ({wishlist.length})</p>
-              {wishlist.length === 0
-                ? <p className="text-sm text-[#9b7b69] text-center py-10">Your wishlist is empty.</p>
-                : (
-                  <div className="space-y-3">
-                    {wishlist.map((item) => (
-                      <div key={item.id} className="flex items-center gap-4 rounded-[18px] border border-[#f0e4de] bg-[#fff8f3] p-4">
-                        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#fff9f4] to-[#fde8d8] text-3xl">🥻</div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-semibold text-[#3d1e17] text-sm">{item.name}</p>
-                          <p className="text-xs text-[#9b7b69]">{item.seller}</p>
-                          <div className="flex items-center gap-2 mt-1">
-                            <p className="text-sm font-bold text-[#7a1e2c]">{item.price}</p>
-                            <div className="flex items-center gap-0.5 text-[#c28b1e]">
-                              <Star size={11} fill="currentColor" />
-                              <span className="text-xs font-semibold text-[#3d1e17]">{item.rating}</span>
-                            </div>
-                          </div>
+        {activeTab === 'addresses' ? (
+          <div>
+            <div className='flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between'>
+              <div>
+                <p className='text-xs font-semibold uppercase tracking-[0.24em] text-[#a6806f]'>
+                  Saved addresses
+                </p>
+                <h2 className='mt-2 text-2xl font-bold text-[#34160f]'>Choose where you want delivery</h2>
+              </div>
+              <button
+                type='button'
+                className='inline-flex items-center gap-2 rounded-full bg-[#7a1e2c] px-4 py-2.5 text-sm font-semibold text-white'
+              >
+                <Plus size={14} />
+                Add address
+              </button>
+            </div>
+
+            <div className='mt-6 grid gap-4'>
+              {ADDRESSES.map((address) => (
+                <div key={address.id} className='rounded-[24px] bg-[#fffaf6] p-5'>
+                  <div className='flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between'>
+                    <div>
+                      <div className='flex flex-wrap gap-2'>
+                        <span className='rounded-full bg-[#7a1e2c] px-3 py-1 text-xs font-semibold text-white'>
+                          {address.label}
+                        </span>
+                        {address.default ? (
+                          <span className='rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700'>
+                            Default
+                          </span>
+                        ) : null}
+                      </div>
+                      <p className='mt-4 text-sm font-semibold text-[#34160f]'>{address.address}</p>
+                      <p className='mt-2 text-sm text-[#8b6759]'>{address.phone}</p>
+                    </div>
+
+                    <button
+                      type='button'
+                      className='inline-flex items-center gap-2 rounded-full border border-[#f1d5cf] bg-white px-4 py-2 text-sm font-semibold text-[#c44634]'
+                    >
+                      <Trash2 size={14} />
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
+
+        {activeTab === 'wishlist' ? (
+          <div>
+            <p className='text-xs font-semibold uppercase tracking-[0.24em] text-[#a6806f]'>
+              Wishlist
+            </p>
+            <h2 className='mt-2 text-2xl font-bold text-[#34160f]'>Saved favourites</h2>
+
+            {wishlist.length ? (
+              <div className='mt-6 grid gap-4'>
+                {wishlist.map((item) => (
+                  <div key={item.id} className='rounded-[24px] bg-[#fffaf6] p-5'>
+                    <div className='flex flex-col gap-4 sm:flex-row sm:items-center'>
+                      <div className='flex h-20 w-full items-center justify-center rounded-[22px] bg-gradient-to-br from-[#fff8f1] via-[#fdecd9] to-[#f7d9c6] text-3xl sm:w-20'>
+                        S
+                      </div>
+                      <div className='flex-1'>
+                        <p className='text-lg font-bold text-[#34160f]'>{item.name}</p>
+                        <p className='mt-1 text-sm text-[#8b6759]'>{item.seller}</p>
+                        <div className='mt-3 flex flex-wrap items-center gap-3'>
+                          <span className='text-base font-bold text-[#7a1e2c]'>{item.price}</span>
+                          <span className='inline-flex items-center gap-1 rounded-full bg-[#fff6db] px-3 py-1 text-xs font-semibold text-[#9b6a08]'>
+                            <Star size={12} fill='currentColor' />
+                            {item.rating}
+                          </span>
                         </div>
-                        <button
-                          onClick={() => setWishlist((p) => p.filter((x) => x.id !== item.id))}
-                          className="flex h-8 w-8 items-center justify-center rounded-xl border border-[#fde8d8] bg-white text-red-400 transition hover:bg-red-50"
-                        >
-                          <Trash2 size={14} />
-                        </button>
                       </div>
-                    ))}
-                  </div>
-                )
-              }
-            </div>
-          )}
-
-          {/* Order History */}
-          {tab === 'history' && (
-            <div>
-              <p className="font-bold text-[#3d1e17] mb-5">Order History</p>
-              <div className="space-y-3">
-                {ORDER_HISTORY.map((o) => (
-                  <div key={o.id} className="flex items-center gap-4 rounded-[18px] border border-[#f0e4de] bg-[#fff8f3] p-4">
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#fff9f4] to-[#fde8d8] text-2xl">🥻</div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-[#3d1e17] text-sm truncate">{o.product}</p>
-                      <p className="text-xs text-[#9b7b69]">{o.id} · {o.date}</p>
+                      <button
+                        type='button'
+                        onClick={() => setWishlist((prev) => prev.filter((entry) => entry.id !== item.id))}
+                        className='inline-flex items-center justify-center gap-2 rounded-full border border-[#f1d5cf] bg-white px-4 py-2 text-sm font-semibold text-[#c44634]'
+                      >
+                        <Trash2 size={14} />
+                        Remove
+                      </button>
                     </div>
-                    <div className="text-right shrink-0">
-                      <p className="text-sm font-bold text-[#7a1e2c]">{o.price}</p>
-                      <span className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold ${STATUS_COLOR[o.status]}`}>
-                        {o.status}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className='mt-6 text-sm text-[#8b6759]'>Your wishlist is empty.</p>
+            )}
+          </div>
+        ) : null}
+
+        {activeTab === 'history' ? (
+          <div>
+            <p className='text-xs font-semibold uppercase tracking-[0.24em] text-[#a6806f]'>
+              Order history
+            </p>
+            <h2 className='mt-2 text-2xl font-bold text-[#34160f]'>Recent purchases</h2>
+
+            <div className='mt-6 grid gap-4'>
+              {ORDER_HISTORY.map((order) => (
+                <div key={order.id} className='rounded-[24px] bg-[#fffaf6] p-5'>
+                  <div className='flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between'>
+                    <div>
+                      <p className='text-lg font-bold text-[#34160f]'>{order.product}</p>
+                      <p className='mt-1 text-sm text-[#8b6759]'>
+                        {order.id} • {order.date}
+                      </p>
+                    </div>
+                    <div className='flex flex-col gap-2 sm:items-end'>
+                      <span className='text-base font-bold text-[#7a1e2c]'>{order.price}</span>
+                      <span className={`rounded-full px-3 py-1 text-xs font-semibold ${STATUS_STYLES[order.status]}`}>
+                        {order.status}
                       </span>
                     </div>
                   </div>
-                ))}
-              </div>
+                </div>
+              ))}
             </div>
-          )}
-        </div>
-      </div>
+          </div>
+        ) : null}
+      </section>
     </div>
   );
 };
