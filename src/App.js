@@ -11,6 +11,7 @@ const LandingPage = lazy(() => import("./pages/LandingPage/LandingPage"));
 const Login = lazy(() => import("./pages/Login/Login"));
 const Register = lazy(() => import("./pages/Register/Register"));
 const Dashboard = lazy(() => import("./pages/Dashboard/Dashboard"));
+const CustomerDashboard = lazy(() => import("./CustmerPage/CustomerDashboard/Dashboard"));
 
 const PrivateRoute = ({ children }) => {
   const isAuth = localStorage.getItem("login");
@@ -53,6 +54,14 @@ function App() {
                 element={
                   <PrivateRoute>
                     <Dashboard />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/customer-dashboard"
+                element={
+                  <PrivateRoute>
+                    <CustomerDashboard />
                   </PrivateRoute>
                 }
               />
