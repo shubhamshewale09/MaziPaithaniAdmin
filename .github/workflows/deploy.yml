@@ -45,7 +45,7 @@ jobs:
             echo "Connected"
             hostname
 
-      # ✅ Stop IIS App Pool
+      # ✅ Stop IIS
       - name: 🛑 Stop IIS App Pool
         uses: appleboy/ssh-action@v1.0.0
         with:
@@ -55,7 +55,21 @@ jobs:
           script: |
             powershell -Command "Import-Module WebAdministration; if ((Get-WebAppPoolState -Name 'Demo').Value -eq 'Started') { Stop-WebAppPool -Name 'Demo' }"
 
-      # ✅ Upload Build (FIXED PATH)
+      # ✅ Backup Existing Files
+      - name: 📦 Backup Existing Files
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: 15.207.106.250
+          username: Administrator
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            powershell -Command "
+              $source = 'C:\inetpub\ReactApp';
+              $backup = 'C:\inetpub\backup_ReactApp_' + (Get-Date -Format 'yyyyMMdd_HHmmss') + '.zip';
+              Compress-Archive -Path $source\* -DestinationPath $backup -Force
+            "
+
+      # ✅ Upload Build
       - name: 🚀 Upload Build
         uses: appleboy/scp-action@v0.1.7
         with:
