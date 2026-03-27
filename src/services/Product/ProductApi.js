@@ -165,6 +165,14 @@ export const UpdateProductImage = async (params) => {
   return data;
 };
 
+export const UpdateStock = async (params) => {
+  const res = await putApiWithAuthorization(
+    `${Base_Url}api/savedata/UpdateStock`,
+    { iProductId: params.iProductId, iStock: params.iStock }
+  );
+  return res;
+};
+
 export const DeleteProductDetails = async (productId) => {
   const res = await deleteApiWithAuthorization(
     `${Base_Url}api/savedata/DeleteProductdeatils/${productId}`,

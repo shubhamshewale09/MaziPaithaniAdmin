@@ -34,8 +34,9 @@ import {
   UpdateProductDetails,
   UpdateProductImage,
   UploadProductImages,
-} from '../../services/Product/ProductApi';
-import { showApiError, showApiSuccess } from '../../Utils/Utils';
+  UpdateStock,
+} from "../../services/Product/ProductApi";
+import { showApiError, showApiSuccess } from "../../Utils/Utils";
 
 const formatCurrency = (value) => `Rs ${value.toLocaleString('en-IN')}`;
 
@@ -172,13 +173,13 @@ const normalizeApiProducts = (response, categoryMap = {}) => {
         product?.id ??
         index + 1;
 
-      const price = Number(
-        product?.dcBasePrice ?? product?.price ?? product?.basePrice ?? 0,
-      );
-      const stock = Number(product?.iStock ?? product?.stock ?? 0);
-      const color = product?.sColor ?? product?.color ?? product?.palette ?? '';
-      const description =
-        product?.sDescription ?? product?.description ?? product?.weave ?? '';
+    const price = Number(
+      product?.dcBasePrice ?? product?.price ?? product?.basePrice ?? 0
+    );
+    const stock = Number(product?.productstock ?? product?.iStock ?? product?.stock ?? 0);
+    const color = product?.sColor ?? product?.color ?? product?.palette ?? "";
+    const description =
+      product?.sDescription ?? product?.description ?? product?.weave ?? "";
 
       return {
         id: `PRD-${productId}`,
@@ -240,6 +241,8 @@ const ProductList = () => {
   const [productModalMode, setProductModalMode] = useState('add');
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [imageViewer, setImageViewer] = useState(null);
+  const [pendingStock, setPendingStock] = useState({});
+  const [stockConfirm, setStockConfirm] = useState(null);
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -303,32 +306,24 @@ const ProductList = () => {
 
   const categoryOptions = useMemo(() => [...new Set(products.map((p) => p.category).filter(Boolean))], [products]);
 
-  const filteredProducts = useMemo(() => {
-    return products.filter((product) => {
-      const text = `${product.name} ${product.category} ${product.palette} ${product.weave}`.toLowerCase();
-      if (query && !text.includes(query.toLowerCase())) return false;
-      if (filters.category && product.category !== filters.category) return false;
-      if (filters.status && product.status !== filters.status) return false;
-      if (filters.customizable !== "" && String(product.isCustomizationAvailable) !== filters.customizable) return false;
-      if (filters.priceMin !== "" && product.price < Number(filters.priceMin)) return false;
-      if (filters.priceMax !== "" && product.price > Number(filters.priceMax)) return false;
-      return true;
-    });
-  }, [products, query, filters]);
+  const filteredProducts = useMemo(() => products.filter((product) => {
+    const text = `${product.name} ${product.category} ${product.palette} ${product.weave}`.toLowerCase();
+    if (query && !text.includes(query.toLowerCase())) return false;
+    if (filters.category && product.category !== filters.category) return false;
+    if (filters.status && product.status !== filters.status) return false;
+    if (filters.customizable !== "" && String(product.isCustomizationAvailable) !== filters.customizable) return false;
+    if (filters.priceMin !== "" && product.price < Number(filters.priceMin)) return false;
+    if (filters.priceMax !== "" && product.price > Number(filters.priceMax)) return false;
+    return true;
+  }), [products, query, filters]);
 
   const activeFilterCount = Object.values(filters).filter(Boolean).length;
-
-  const activeProducts = inventorySummary?.availableStock ?? products.filter((product) => product.stock > 0).length;
-  const featuredProducts = products.filter(
-    (product) => product.status === 'Featured',
-  ).length;
-  const inventoryValue = inventorySummary?.inventoryValue ?? products.reduce(
-    (total, product) => total + product.price * product.stock,
-    0,
-  );
-  const totalProducts = inventorySummary?.productCount ?? products.length;
-
   const clearFilters = () => setFilters({ category: "", status: "", customizable: "", priceMin: "", priceMax: "" });
+
+  const activeProducts = inventorySummary?.availableStock ?? products.filter((p) => p.stock > 0).length;
+  const featuredProducts = products.filter((p) => p.status === "Featured").length;
+  const inventoryValue = inventorySummary?.inventoryValue ?? products.reduce((t, p) => t + p.price * p.stock, 0);
+  const totalProducts = inventorySummary?.productCount ?? products.length;
 
   const changeImage = (productId, direction, totalImages) => {
     setActiveImages((current) => {
@@ -614,14 +609,32 @@ const ProductList = () => {
     }
   };
 
-  const handleUpdateStock = (productId, direction) => {
-    setProducts((current) =>
-      current.map((product) =>
-        product.id === productId
-          ? { ...product, stock: Math.max(0, product.stock + direction) }
-          : product,
-      ),
-    );
+  const handleUpdateStock = (productId, currentStock, direction) => {
+    const next = Math.max(0, currentStock + direction);
+    setPendingStock((s) => ({ ...s, [productId]: next }));
+  };
+
+  const handleConfirmStock = (product) => {
+    const pending = pendingStock[product.id];
+    if (pending === undefined || pending === product.stock) return;
+    setStockConfirm({ product, newStock: pending });
+  };
+
+  const handleSubmitStock = async () => {
+    if (!stockConfirm) return;
+    const { product, newStock } = stockConfirm;
+    try {
+      const response = await UpdateStock({ iProductId: product.iProductId, iStock: newStock });
+      setProducts((current) =>
+        current.map((p) => p.id === product.id ? { ...p, stock: newStock } : p)
+      );
+      setPendingStock((s) => { const n = { ...s }; delete n[product.id]; return n; });
+      showApiSuccess(getResponseMessage(response) || "Stock updated successfully.");
+    } catch (error) {
+      showApiError(error?.response?.data || { message: "Unable to update stock right now." });
+    } finally {
+      setStockConfirm(null);
+    }
   };
 
   const confirmDelete = async () => {
@@ -660,35 +673,23 @@ const ProductList = () => {
 
         {isFilterOpen ? (
           <div className="rounded-[18px] border border-[#ead8cf] bg-[#fffaf6] p-4 sm:p-5">
-            <div className="flex items-center justify-between gap-3 mb-4">
+            <div className="mb-4 flex items-center justify-between gap-3">
               <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#a27c68]">Filter Products</p>
               {activeFilterCount > 0 ? (
-                <button type="button" onClick={clearFilters} className="text-xs font-semibold text-[#7a1e2c] hover:underline">
-                  Clear all
-                </button>
+                <button type="button" onClick={clearFilters} className="text-xs font-semibold text-[#7a1e2c] hover:underline">Clear all</button>
               ) : null}
             </div>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
               <div>
-                <label className="seller-label">Category</label>
-                <select
-                  value={filters.category}
-                  onChange={(e) => setFilters((f) => ({ ...f, category: e.target.value }))}
-                  className="seller-select mt-1"
-                >
+                <label className="text-xs font-bold uppercase tracking-[0.14em] text-[#a27c68]">Category</label>
+                <select value={filters.category} onChange={(e) => setFilters((f) => ({ ...f, category: e.target.value }))} className="seller-select mt-1">
                   <option value="">All Categories</option>
-                  {categoryOptions.map((cat) => (
-                    <option key={cat} value={cat}>{cat}</option>
-                  ))}
+                  {categoryOptions.map((cat) => <option key={cat} value={cat}>{cat}</option>)}
                 </select>
               </div>
               <div>
-                <label className="seller-label">Status</label>
-                <select
-                  value={filters.status}
-                  onChange={(e) => setFilters((f) => ({ ...f, status: e.target.value }))}
-                  className="seller-select mt-1"
-                >
+                <label className="text-xs font-bold uppercase tracking-[0.14em] text-[#a27c68]">Status</label>
+                <select value={filters.status} onChange={(e) => setFilters((f) => ({ ...f, status: e.target.value }))} className="seller-select mt-1">
                   <option value="">All Status</option>
                   <option value="Active">Active</option>
                   <option value="Out of Stock">Out of Stock</option>
@@ -696,36 +697,20 @@ const ProductList = () => {
                 </select>
               </div>
               <div>
-                <label className="seller-label">Customizable</label>
-                <select
-                  value={filters.customizable}
-                  onChange={(e) => setFilters((f) => ({ ...f, customizable: e.target.value }))}
-                  className="seller-select mt-1"
-                >
+                <label className="text-xs font-bold uppercase tracking-[0.14em] text-[#a27c68]">Customizable</label>
+                <select value={filters.customizable} onChange={(e) => setFilters((f) => ({ ...f, customizable: e.target.value }))} className="seller-select mt-1">
                   <option value="">All</option>
                   <option value="true">Yes</option>
                   <option value="false">No</option>
                 </select>
               </div>
               <div>
-                <label className="seller-label">Min Price</label>
-                <input
-                  type="number"
-                  value={filters.priceMin}
-                  onChange={(e) => setFilters((f) => ({ ...f, priceMin: e.target.value }))}
-                  placeholder="0"
-                  className="seller-input mt-1"
-                />
+                <label className="text-xs font-bold uppercase tracking-[0.14em] text-[#a27c68]">Min Price</label>
+                <input type="number" value={filters.priceMin} onChange={(e) => setFilters((f) => ({ ...f, priceMin: e.target.value }))} placeholder="0" className="seller-input mt-1" />
               </div>
               <div>
-                <label className="seller-label">Max Price</label>
-                <input
-                  type="number"
-                  value={filters.priceMax}
-                  onChange={(e) => setFilters((f) => ({ ...f, priceMax: e.target.value }))}
-                  placeholder="Any"
-                  className="seller-input mt-1"
-                />
+                <label className="text-xs font-bold uppercase tracking-[0.14em] text-[#a27c68]">Max Price</label>
+                <input type="number" value={filters.priceMax} onChange={(e) => setFilters((f) => ({ ...f, priceMax: e.target.value }))} placeholder="Any" className="seller-input mt-1" />
               </div>
             </div>
           </div>
@@ -937,36 +922,42 @@ const ProductList = () => {
                         <div className='rounded-[22px] border border-[#ecd8d0] bg-[#fff9f5] p-4'>
                           <div className='flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between'>
                             <div>
-                              <p className='text-xs font-bold uppercase tracking-[0.18em] text-[#a27c68]'>
-                                Manage Stock
-                              </p>
-                              <p className='mt-1 text-sm text-[#6d5850]'>
-                                Adjust available pieces locally while the
-                                dedicated stock endpoint is still pending.
+                              <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#a27c68]">Manage Stock</p>
+                              <p className="mt-1 text-sm text-[#6d5850]">
+                                Current: <span className="font-semibold text-[#351915]">{product.stock}</span> pieces
                               </p>
                             </div>
-                            <div className='inline-flex items-center gap-2 rounded-full border border-[#ead8cf] bg-white p-1.5'>
-                              <button
-                                type='button'
-                                onClick={() =>
-                                  handleUpdateStock(product.id, -1)
-                                }
-                                className='flex h-9 w-9 items-center justify-center rounded-full bg-[#f8ede7] text-[#7a1e2c] shadow-sm transition hover:bg-[#f1ddd4]'
-                                aria-label={`Decrease stock for ${product.name}`}
-                              >
-                                <Minus size={16} />
-                              </button>
-                              <span className='min-w-[48px] text-center text-sm font-semibold text-[#351915]'>
-                                {product.stock}
-                              </span>
-                              <button
-                                type='button'
-                                onClick={() => handleUpdateStock(product.id, 1)}
-                                className='flex h-9 w-9 items-center justify-center rounded-full bg-[#7a1e2c] text-white shadow-sm transition hover:bg-[#651623]'
-                                aria-label={`Increase stock for ${product.name}`}
-                              >
-                                <Plus size={16} />
-                              </button>
+                            <div className="flex flex-col items-end gap-2">
+                              <div className="inline-flex items-center gap-2 rounded-full border border-[#ead8cf] bg-white p-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() => handleUpdateStock(product.id, pendingStock[product.id] ?? product.stock, -1)}
+                                  className="flex h-9 w-9 items-center justify-center rounded-full bg-[#f8ede7] text-[#7a1e2c] shadow-sm transition hover:bg-[#f1ddd4]"
+                                  aria-label={`Decrease stock for ${product.name}`}
+                                >
+                                  <Minus size={16} />
+                                </button>
+                                <span className="min-w-[48px] text-center text-sm font-semibold text-[#351915]">
+                                  {pendingStock[product.id] ?? product.stock}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleUpdateStock(product.id, pendingStock[product.id] ?? product.stock, 1)}
+                                  className="flex h-9 w-9 items-center justify-center rounded-full bg-[#7a1e2c] text-white shadow-sm transition hover:bg-[#651623]"
+                                  aria-label={`Increase stock for ${product.name}`}
+                                >
+                                  <Plus size={16} />
+                                </button>
+                              </div>
+                              {pendingStock[product.id] !== undefined && pendingStock[product.id] !== product.stock ? (
+                                <button
+                                  type="button"
+                                  onClick={() => handleConfirmStock(product)}
+                                  className="rounded-[10px] bg-[#7a1e2c] px-4 py-1.5 text-xs font-semibold text-white transition hover:bg-[#651623]"
+                                >
+                                  Update Stock
+                                </button>
+                              ) : null}
                             </div>
                           </div>
                         </div>
@@ -992,12 +983,26 @@ const ProductList = () => {
       />
 
       <ConfirmationModal
+        open={Boolean(stockConfirm)}
+        title="Update stock?"
+        message={
+          stockConfirm
+            ? `Update stock for "${stockConfirm.product.name}" from ${stockConfirm.product.stock} to ${stockConfirm.newStock} pieces?`
+            : ""
+        }
+        confirmLabel="Update"
+        cancelLabel="Cancel"
+        onConfirm={handleSubmitStock}
+        onClose={() => setStockConfirm(null)}
+      />
+
+      <ConfirmationModal
         open={Boolean(pendingDelete)}
         title='Delete product?'
         message={
           pendingDelete
-            ? `Do you want to delete ${pendingDelete.name}? This will call the product delete API.`
-            : ''
+            ? `Are you sure you want to delete "${pendingDelete.name}"? This product will be permanently removed.`
+            : ""
         }
         confirmLabel='Delete'
         cancelLabel='Keep Product'
