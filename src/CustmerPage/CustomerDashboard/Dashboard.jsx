@@ -1,20 +1,20 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowRight,
-  Clock3,
+  ChevronLeft,
+  ChevronRight,
   Heart,
-  MapPin,
   MessageCircle,
-  Palette,
-  ShieldCheck,
+  Package,
   ShoppingCart,
   Sparkles,
   Star,
-  Truck,
+  Store,
+  Tag,
+  Zap,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { disconnectChatHub, useChatConnection } from '../../hooks/useChatConnection';
-
 import MetaTitle from '../../components/custom/MetaTitle';
 import CustomerLayout from '../../components/custom/customer/CustomerLayout';
 import Categories from '../Categories/Categories';
@@ -27,458 +27,360 @@ import Messages from '../Messages/Messages';
 import Profile from '../Profile/Profile';
 import { useAuth } from '../../context/auth/AuthContext';
 import { showApiSuccess } from '../../Utils/Utils';
+import { GetAllProductData } from '../../services/Product/ProductApi';
 
-const featuredProducts = [
-  {
-    id: 1,
-    name: 'Peacock Motif Paithani',
-    seller: 'Ravi Handlooms',
-    price: 'Rs 14,500 - Rs 18,000',
-    rating: 4.8,
-    tag: 'Bestseller',
-    location: 'Yeola, Nashik',
-    color: 'Emerald Green',
-    fabric: 'Pure Silk',
-    design: 'Traditional',
-  },
-  {
-    id: 2,
-    name: 'Bridal Gold Border',
-    seller: 'Sunita Weaves',
-    price: 'Rs 22,000 - Rs 35,000',
-    rating: 4.9,
-    tag: 'Wedding Edit',
-    location: 'Paithan, Chhatrapati Sambhajinagar',
-    color: 'Royal Red',
-    fabric: 'Pure Silk',
-    design: 'Bridal',
-  },
-  {
-    id: 3,
-    name: 'Lotus Pallu Design',
-    seller: 'Mohan Silk House',
-    price: 'Rs 11,200 - Rs 15,600',
-    rating: 4.7,
-    tag: 'New Arrival',
-    location: 'Yeola, Nashik',
-    color: 'Lotus Pink',
-    fabric: 'Silk Cotton',
-    design: 'Designer',
-  },
-];
+const getUserId = () => {
+  try {
+    const d = JSON.parse(localStorage.getItem('login') || '{}');
+    return d?.userId ?? d?.UserId ?? localStorage.getItem('UserId') ?? '0';
+  } catch {
+    return '0';
+  }
+};
 
-const recommendedProducts = [
-  {
-    id: 4,
-    name: 'Royal Zari Weave',
-    seller: 'Sunita Weaves',
-    price: 'Rs 24,500 - Rs 29,000',
-    rating: 4.9,
-    tag: 'Recommended',
-    location: 'Paithan, Chhatrapati Sambhajinagar',
-    color: 'Royal Gold',
-    fabric: 'Pure Silk',
-    design: 'Bridal',
-  },
-  {
-    id: 5,
-    name: 'Festival Border Paithani',
-    seller: 'Ravi Handlooms',
-    price: 'Rs 16,800 - Rs 21,500',
-    rating: 4.6,
-    tag: 'Popular',
-    location: 'Yeola, Nashik',
-    color: 'Violet Pink',
-    fabric: 'Silk Cotton',
-    design: 'Traditional',
-  },
-  {
-    id: 6,
-    name: 'Temple Pallu Classic',
-    seller: 'Mohan Silk House',
-    price: 'Rs 18,000 - Rs 23,000',
-    rating: 4.7,
-    tag: 'Daily Luxury',
-    location: 'Yeola, Nashik',
-    color: 'Deep Blue',
-    fabric: 'Pure Silk',
-    design: 'Traditional',
-  },
-];
+const fixUrl = (url) => (typeof url === 'string' ? url : '');
 
-const topArtisans = [
-  {
-    id: 1,
-    seller: 'Ravi Handlooms',
-    location: 'Yeola, Nashik',
-    rating: 4.9,
-    speciality: 'Peacock motif and bridal borders',
-  },
-  {
-    id: 2,
-    seller: 'Sunita Weaves',
-    location: 'Paithan, Chhatrapati Sambhajinagar',
-    rating: 4.8,
-    speciality: 'Wedding palette and zari work',
-  },
-  {
-    id: 3,
-    seller: 'Mohan Silk House',
-    location: 'Yeola, Nashik',
-    rating: 4.7,
-    speciality: 'Custom temple and lotus pallu designs',
-  },
-];
+const normalizeProducts = (response) => {
+  const raw = Array.isArray(response?.products)
+    ? response.products
+    : Array.isArray(response?.data)
+    ? response.data
+    : Array.isArray(response)
+    ? response
+    : [];
 
-const artisanHighlights = [
-  {
-    title: 'Authentic weaving',
-    description: 'Direct buying from real Paithani artisans with design details up front.',
-    icon: ShieldCheck,
-  },
-  {
-    title: 'Custom requests',
-    description: 'Share colors, motifs, and timeline with artisans for made-for-you sarees.',
-    icon: Palette,
-  },
-  {
-    title: 'Safe delivery',
-    description: 'Track orders, talk to sellers, and manage checkout in one mobile-friendly flow.',
-    icon: Truck,
-  },
-];
+  return raw
+    .filter((p) => p?.bIsDeleted !== true && p?.bIsActive !== false)
+    .map((p) => ({
+      id: p.iProductId,
+      iProductId: p.iProductId,
+      name: p.sProductTitle ?? p.productName ?? 'Untitled',
+      seller: p.sellerName ?? p.sSellerName ?? '',
+      sellerUserId: p.sellerUserId ?? p.iSellerUserId ?? null,
+      price: Number(p.dcBasePrice ?? 0),
+      color: p.sColor ?? '',
+      fabric: p.sFabric ?? '',
+      design: p.sDesignType ?? '',
+      stock: Number(p.productstock ?? p.iStock ?? 0),
+      isCustomizationAvailable: p.bIsCustomizationAvailable ?? false,
+      description: p.sDescription ?? '',
+      images: Array.isArray(p.images)
+        ? p.images.map((img) => fixUrl(img.sImageUrl ?? img.src ?? '')).filter(Boolean)
+        : [],
+    }));
+};
 
-const shopperMetrics = [
-  { label: 'Active artisans', value: '82+' },
-  { label: 'Ready to ship', value: '250+' },
-  { label: 'Custom requests', value: '36 open' },
-  { label: 'Avg. dispatch', value: '4 days' },
-];
+// ── Product card ──────────────────────────────────────────────────────────────
+const ProductCard = ({ item, onOpen, onAddToCart, onChatSeller }) => {
+  const [activeImg, setActiveImg] = useState(0);
+  const [wished, setWished] = useState(false);
+  const [added, setAdded] = useState(false);
+  const hasImages = item.images.length > 0;
+  const total = item.images.length;
+  const isOutOfStock = item.stock === 0;
 
-const tooltipClassName =
-  'pointer-events-none absolute -top-12 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-2xl border border-[#f2d7c5] bg-gradient-to-br from-[#fffaf6] via-[#fff4ec] to-[#fde7d7] px-3 py-1.5 text-[11px] font-semibold text-[#7a1e2c] opacity-0 shadow-[0_12px_30px_rgba(94,35,23,0.16)] transition duration-200 group-hover:-translate-y-1 group-hover:opacity-100';
+  const handleAddToCart = (e) => {
+    e.stopPropagation();
+    setAdded(true);
+    onAddToCart(item);
+    setTimeout(() => setAdded(false), 1500);
+  };
 
-const ProductPreviewCard = ({ item, onOpen, onAddToCart }) => (
-  <div className='group rounded-[28px] border border-[#efdcd2] bg-white p-4 text-left shadow-[0_20px_50px_rgba(94,35,23,0.08)] transition hover:-translate-y-1 hover:shadow-[0_24px_60px_rgba(94,35,23,0.12)]'>
-    <div className='relative overflow-hidden rounded-[24px] bg-gradient-to-br from-[#fff8f1] via-[#fdecd9] to-[#f7d9c6] p-6'>
-      <span className='absolute left-4 top-4 rounded-full bg-white/85 px-3 py-1 text-[11px] font-semibold text-[#7a1e2c]'>
-        {item.tag}
-      </span>
+  const handleChat = (e) => {
+    e.stopPropagation();
+    onChatSeller({ sellerId: item.sellerUserId, sellerName: item.seller });
+  };
 
-      <div className='absolute right-4 top-4 flex items-center gap-2'>
-        <button
-          type='button'
-          title='Save to wishlist'
-          className='group relative flex h-10 w-10 items-center justify-center rounded-full bg-white/85 text-[#7a1e2c] shadow-sm'
-        >
-          <span className={tooltipClassName}>Save to wishlist</span>
-          <Heart size={15} />
-        </button>
-        <button
-          type='button'
-          title='Add to cart'
-          onClick={() => onAddToCart(item)}
-          className='group relative flex h-10 w-10 items-center justify-center rounded-full bg-white/85 text-[#7a1e2c] shadow-sm'
-        >
-          <span className={tooltipClassName}>Add to cart</span>
-          <ShoppingCart size={15} />
-        </button>
-      </div>
+  return (
+    <div className='group flex flex-col bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5'>
 
-      <div className='flex h-44 items-center justify-center rounded-[22px] border border-white/50 bg-white/30 text-7xl shadow-inner'>
-        S
-      </div>
-    </div>
-
-    <div className='mt-4'>
-      <div className='flex items-start justify-between gap-3'>
-        <div>
-          <p className='text-lg font-bold text-[#34160f]'>{item.name}</p>
-          <p className='mt-1 text-sm text-[#8b6759]'>{item.seller}</p>
-        </div>
-        <span className='flex items-center gap-1 rounded-full bg-[#fff6db] px-2.5 py-1 text-xs font-semibold text-[#9b6a08]'>
-          <Star size={12} fill='currentColor' />
-          {item.rating}
-        </span>
-      </div>
-
-      <div className='mt-3 flex flex-wrap items-center gap-3 text-xs text-[#8b6759]'>
-        <span className='flex items-center gap-1'>
-          <MapPin size={12} />
-          {item.location}
-        </span>
-        <span>{item.color}</span>
-      </div>
-
-      <div className='mt-4 flex items-center justify-between gap-3'>
-        <p className='text-base font-bold text-[#7a1e2c]'>{item.price}</p>
-        <button
-          type='button'
-          onClick={() => onOpen(item)}
-          className='inline-flex items-center gap-2 rounded-full border border-[#ead9cf] bg-[#fffaf6] px-4 py-2 text-sm font-semibold text-[#7a1e2c] transition hover:bg-[#fff1e7]'
-        >
-          View Details
-          <ArrowRight size={14} />
-        </button>
-      </div>
-    </div>
-  </div>
-);
-
-const ArtisanCard = ({ artisan, onMessage }) => (
-  <button
-    type='button'
-    onClick={() => onMessage(artisan.seller)}
-    className='group rounded-[28px] border border-[#efdcd2] bg-white p-5 text-left shadow-[0_18px_45px_rgba(94,35,23,0.08)] transition hover:-translate-y-1 hover:shadow-[0_22px_55px_rgba(94,35,23,0.12)]'
-  >
-    <div className='flex items-start justify-between gap-3'>
-      <div className='flex items-center gap-4'>
-        <div className='flex h-14 w-14 items-center justify-center rounded-[20px] bg-gradient-to-br from-[#7a1e2c] to-[#c28b1e] text-lg font-bold text-white'>
-          {artisan.seller[0]}
-        </div>
-        <div>
-          <p className='text-lg font-bold text-[#34160f]'>{artisan.seller}</p>
-          <p className='mt-1 text-sm text-[#8b6759]'>{artisan.location}</p>
-        </div>
-      </div>
-      <span className='flex items-center gap-1 rounded-full bg-[#fff6db] px-2.5 py-1 text-xs font-semibold text-[#9b6a08]'>
-        <Star size={12} fill='currentColor' />
-        {artisan.rating}
-      </span>
-    </div>
-
-    <p className='mt-4 text-sm leading-7 text-[#8b6759]'>{artisan.speciality}</p>
-
-    <div className='mt-5 inline-flex items-center gap-2 rounded-full bg-[#fff1e7] px-4 py-2 text-sm font-semibold text-[#7a1e2c]'>
-      <MessageCircle size={15} />
-      Message artisan
-    </div>
-  </button>
-);
-
-const HomeTab = ({
-  onBrowseCollection,
-  onOpenProduct,
-  onCustomRequest,
-  onAddToCart,
-  onMessageArtisan,
-}) => (
-  <div className='space-y-6 sm:space-y-8'>
-    <section className='relative overflow-hidden rounded-[32px] bg-gradient-to-br from-[#5a1220] via-[#7a1e2c] to-[#2f0c12] px-5 py-6 text-white shadow-[0_28px_80px_rgba(66,18,28,0.28)] sm:px-8 sm:py-9'>
-      <div className='absolute -right-12 top-0 h-40 w-40 rounded-full bg-[#f5d47c]/20 blur-3xl' />
-      <div className='absolute bottom-0 left-0 h-28 w-28 rounded-full bg-white/10 blur-3xl' />
-
-      <div className='relative grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-end'>
-        <div>
-          <p className='text-xs font-semibold uppercase tracking-[0.34em] text-[#f5d47c]'>
-            Customer Experience
-          </p>
-          <h1 className='mt-3 max-w-2xl font-serif text-3xl font-bold leading-tight sm:text-4xl lg:text-5xl'>
-            Buy handcrafted Paithani sarees with a storefront made for shoppers.
-          </h1>
-          <p className='mt-4 max-w-xl text-sm leading-7 text-white/75 sm:text-base'>
-            Explore ready-to-ship collections, talk to artisans, request custom
-            designs, and place orders without the admin dashboard feel.
-          </p>
-
-          <div className='mt-6 flex flex-wrap gap-3'>
-            <button
-              type='button'
-              onClick={onBrowseCollection}
-              className='rounded-full bg-[#f5d47c] px-5 py-3 text-sm font-bold text-[#401712] transition hover:opacity-90'
-            >
-              Shop Collection
-            </button>
-            <button
-              type='button'
-              onClick={onCustomRequest}
-              className='rounded-full border border-white/25 bg-white/10 px-5 py-3 text-sm font-semibold text-white backdrop-blur-sm transition hover:bg-white/15'
-            >
-              Request Custom Design
-            </button>
-          </div>
-        </div>
-
-        <div className='grid grid-cols-2 gap-3'>
-          {shopperMetrics.map((item) => (
-            <div
-              key={item.label}
-              className='rounded-[24px] border border-white/10 bg-white/10 p-4 backdrop-blur-sm'
-            >
-              <p className='text-[11px] font-semibold uppercase tracking-[0.22em] text-white/60'>
-                {item.label}
-              </p>
-              <p className='mt-3 text-2xl font-bold text-white'>{item.value}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-
-    <section className='grid gap-4 md:grid-cols-3'>
-      {artisanHighlights.map((item) => {
-        const Icon = item.icon;
-
-        return (
-          <div
-            key={item.title}
-            className='rounded-[28px] border border-[#efdcd2] bg-white p-5 shadow-[0_16px_40px_rgba(94,35,23,0.07)]'
-          >
-            <div className='flex h-12 w-12 items-center justify-center rounded-2xl bg-[#fff1e7] text-[#7a1e2c]'>
-              <Icon size={20} />
-            </div>
-            <p className='mt-4 text-lg font-bold text-[#34160f]'>{item.title}</p>
-            <p className='mt-2 text-sm leading-7 text-[#8b6759]'>
-              {item.description}
-            </p>
-          </div>
-        );
-      })}
-    </section>
-
-    <section className='rounded-[30px] border border-[#efdcd2] bg-white p-5 shadow-[0_18px_45px_rgba(94,35,23,0.08)] sm:p-6'>
-      <div className='flex items-center justify-between gap-4'>
-        <div>
-          <p className='text-xs font-semibold uppercase tracking-[0.24em] text-[#a6806f]'>
-            Featured Sarees
-          </p>
-          <h2 className='mt-2 text-2xl font-bold text-[#34160f]'>
-            Sarees customers are loving
-          </h2>
-        </div>
-        <button
-          type='button'
-          onClick={onBrowseCollection}
-          className='hidden rounded-full border border-[#ead9cf] px-4 py-2 text-sm font-semibold text-[#7a1e2c] transition hover:bg-[#fff1e7] sm:block'
-        >
-          View all
-        </button>
-      </div>
-
-      <div className='mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3'>
-        {featuredProducts.map((item) => (
-          <ProductPreviewCard
-            key={item.id}
-            item={item}
-            onOpen={onOpenProduct}
-            onAddToCart={onAddToCart}
+      {/* Image block */}
+      <div className='relative overflow-hidden bg-[#faf7f5]' style={{ aspectRatio: '4/5' }}>
+        {hasImages ? (
+          <img
+            src={item.images[activeImg]}
+            alt={item.name}
+            className='w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 cursor-pointer'
+            onClick={() => onOpen(item)}
           />
-        ))}
-      </div>
-    </section>
-
-    <section className='grid gap-6 xl:grid-cols-[1.2fr_0.8fr]'>
-      <div className='rounded-[30px] border border-[#efdcd2] bg-white p-6 shadow-[0_18px_45px_rgba(94,35,23,0.08)]'>
-        <div className='flex items-center justify-between gap-4'>
-          <div>
-            <p className='text-xs font-semibold uppercase tracking-[0.24em] text-[#a6806f]'>
-              Top Artisans
-            </p>
-            <h2 className='mt-2 text-2xl font-bold text-[#34160f]'>
-              Start a conversation with trusted weavers
-            </h2>
+        ) : (
+          <div className='w-full h-full flex flex-col items-center justify-center cursor-pointer' onClick={() => onOpen(item)}>
+            <Package size={48} className='text-[#d4b5a8]' />
+            <p className='mt-2 text-xs text-[#c4a090]'>No image</p>
           </div>
-        </div>
+        )}
 
-        <div className='mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3'>
-          {topArtisans.map((artisan) => (
-            <ArtisanCard key={artisan.id} artisan={artisan} onMessage={onMessageArtisan} />
-          ))}
-        </div>
+        {isOutOfStock && (
+          <div className='absolute inset-0 bg-black/40 flex items-center justify-center'>
+            <span className='bg-white text-[#7a1e2c] text-xs font-bold px-4 py-1.5 rounded-full shadow'>Out of Stock</span>
+          </div>
+        )}
+
+        {!isOutOfStock && item.stock <= 5 && (
+          <span className='absolute top-2.5 left-2.5 bg-orange-500 text-white text-[10px] font-bold px-2.5 py-1 rounded-full shadow'>
+            Only {item.stock} left
+          </span>
+        )}
+        {!isOutOfStock && item.stock > 5 && (
+          <span className='absolute top-2.5 left-2.5 bg-emerald-600 text-white text-[10px] font-bold px-2.5 py-1 rounded-full shadow'>
+            In Stock · {item.stock}
+          </span>
+        )}
+
+        <button
+          type='button'
+          onClick={(e) => { e.stopPropagation(); setWished((w) => !w); }}
+          className={`absolute top-2.5 right-2.5 h-9 w-9 flex items-center justify-center rounded-full shadow transition-all duration-200 ${
+            wished ? 'bg-[#7a1e2c] text-white scale-110' : 'bg-white/90 text-[#7a1e2c] hover:bg-white'
+          }`}
+        >
+          <Heart size={15} fill={wished ? 'currentColor' : 'none'} />
+        </button>
+
+        {total > 1 && (
+          <>
+            <button type='button' onClick={(e) => { e.stopPropagation(); setActiveImg((i) => (i - 1 + total) % total); }}
+              className='absolute left-2 top-1/2 -translate-y-1/2 h-7 w-7 flex items-center justify-center rounded-full bg-white/85 text-[#7a1e2c] shadow opacity-0 group-hover:opacity-100 transition-opacity'>
+              <ChevronLeft size={14} />
+            </button>
+            <button type='button' onClick={(e) => { e.stopPropagation(); setActiveImg((i) => (i + 1) % total); }}
+              className='absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7 flex items-center justify-center rounded-full bg-white/85 text-[#7a1e2c] shadow opacity-0 group-hover:opacity-100 transition-opacity'>
+              <ChevronRight size={14} />
+            </button>
+          </>
+        )}
+
+        {total > 1 && (
+          <div className='absolute bottom-0 left-0 right-0 flex gap-1.5 px-2 pb-2 pt-6 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300'>
+            {item.images.map((src, i) => (
+              <button key={i} type='button' onClick={(e) => { e.stopPropagation(); setActiveImg(i); }}
+                className={`h-10 w-10 shrink-0 rounded-lg overflow-hidden border-2 transition-all ${i === activeImg ? 'border-white scale-105' : 'border-white/40 hover:border-white/80'}`}>
+                <img src={src} alt='' className='h-full w-full object-cover' />
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
-      <div className='space-y-5'>
-        <div className='rounded-[30px] border border-[#efdcd2] bg-white p-6 shadow-[0_18px_45px_rgba(94,35,23,0.08)]'>
-          <p className='text-xs font-semibold uppercase tracking-[0.24em] text-[#a6806f]'>
-            Buying Journey
-          </p>
-          <div className='mt-5 space-y-4'>
-            {[
-              {
-                title: 'Browse categories',
-                description: 'Use filters built for customers, not admin workflows.',
-                icon: Sparkles,
-              },
-              {
-                title: 'Save favorites',
-                description: 'Keep bridal, festive, and artisan picks in one place.',
-                icon: Heart,
-              },
-              {
-                title: 'Track updates',
-                description: 'Follow dispatch, delivery, and seller messages from mobile.',
-                icon: Clock3,
-              },
-            ].map((item) => {
-              const Icon = item.icon;
-
-              return (
-                <div key={item.title} className='flex gap-3 rounded-[22px] bg-[#fff7f2] p-4'>
-                  <div className='flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white text-[#7a1e2c] shadow-sm'>
-                    <Icon size={18} />
-                  </div>
-                  <div>
-                    <p className='font-semibold text-[#34160f]'>{item.title}</p>
-                    <p className='mt-1 text-sm leading-6 text-[#8b6759]'>
-                      {item.description}
-                    </p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+      {/* Info block */}
+      <div className='flex flex-col flex-1 p-3.5'>
+        <div className='flex items-center gap-1 mb-1'>
+          <Store size={11} className='text-[#a6806f]' />
+          <p className='text-[11px] text-[#a6806f] font-medium truncate'>{item.seller || 'Paithani Artisan'}</p>
         </div>
 
-        <div className='rounded-[30px] border border-[#efdcd2] bg-gradient-to-br from-[#fff6df] to-[#fffaf4] p-6 shadow-[0_18px_45px_rgba(94,35,23,0.06)]'>
-          <p className='text-xs font-semibold uppercase tracking-[0.24em] text-[#9b6a08]'>
-            Need something special?
-          </p>
-          <h3 className='mt-2 text-2xl font-bold text-[#34160f]'>
-            Share a custom Paithani idea.
-          </h3>
-          <p className='mt-3 text-sm leading-7 text-[#7a6a52]'>
-            Tell the artisan your motif, wedding palette, blouse requirement,
-            and delivery timeline. We will take you straight into the custom
-            request form.
-          </p>
+        <p className='text-sm font-bold text-[#1a0a07] leading-snug line-clamp-2 cursor-pointer hover:text-[#7a1e2c] transition-colors' onClick={() => onOpen(item)}>
+          {item.name}
+        </p>
+
+        <div className='flex flex-wrap gap-1 mt-1.5'>
+          {item.color && (
+            <span className='inline-flex items-center gap-0.5 text-[10px] bg-[#fff1e7] text-[#7a1e2c] px-2 py-0.5 rounded-full font-medium'>
+              <Tag size={9} /> {item.color}
+            </span>
+          )}
+          {item.fabric && (
+            <span className='text-[10px] bg-[#f0f9f4] text-emerald-700 px-2 py-0.5 rounded-full font-medium'>{item.fabric}</span>
+          )}
+          {item.isCustomizationAvailable && (
+            <span className='inline-flex items-center gap-0.5 text-[10px] bg-[#fff8e1] text-amber-700 px-2 py-0.5 rounded-full font-medium'>
+              <Sparkles size={9} /> Custom
+            </span>
+          )}
+        </div>
+
+        <div className='flex items-center justify-between mt-2'>
+          <p className='text-base font-extrabold text-[#7a1e2c]'>₹{item.price.toLocaleString('en-IN')}</p>
+          <span className='flex items-center gap-0.5 text-[11px] font-semibold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full'>
+            <Star size={10} fill='currentColor' /> 4.8
+          </span>
+        </div>
+
+        {/* Action buttons: Add to Cart | View | Chat Seller */}
+        <div className='mt-3 flex gap-1.5'>
           <button
             type='button'
-            onClick={onCustomRequest}
-            className='mt-5 inline-flex items-center gap-2 rounded-full bg-[#7a1e2c] px-5 py-3 text-sm font-bold text-white'
+            onClick={handleAddToCart}
+            disabled={isOutOfStock}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 ${
+              isOutOfStock
+                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                : added
+                ? 'bg-emerald-600 text-white scale-95'
+                : 'bg-[#7a1e2c] text-white hover:bg-[#651623] active:scale-95'
+            }`}
           >
-            Start custom request
-            <ArrowRight size={15} />
+            <ShoppingCart size={13} />
+            {added ? 'Added!' : isOutOfStock ? 'Unavailable' : 'Add to Cart'}
           </button>
+
+          <button
+            type='button'
+            onClick={() => onOpen(item)}
+            title='View details'
+            className='flex items-center justify-center px-2.5 py-2.5 rounded-xl border border-[#e8d5cc] text-[#7a1e2c] hover:bg-[#fff1e7] transition-colors'
+          >
+            <Zap size={13} />
+          </button>
+
+          {item.sellerUserId && (
+            <button
+              type='button'
+              onClick={handleChat}
+              title={`Chat with ${item.seller || 'seller'}`}
+              className='flex items-center justify-center px-2.5 py-2.5 rounded-xl border border-[#e8d5cc] text-[#7a1e2c] hover:bg-[#fff1e7] transition-colors'
+            >
+              <MessageCircle size={13} />
+            </button>
+          )}
         </div>
       </div>
-    </section>
+    </div>
+  );
+};
 
-    <section className='rounded-[30px] border border-[#efdcd2] bg-white p-5 shadow-[0_18px_45px_rgba(94,35,23,0.08)] sm:p-6'>
-      <div className='flex items-center justify-between gap-4'>
+// ── Horizontal scroll section ─────────────────────────────────────────────────
+const ScrollSection = ({ title, subtitle, products, onOpen, onAddToCart, onChatSeller, onViewAll }) => {
+  const ref = useRef(null);
+  const scroll = (dir) => ref.current?.scrollBy({ left: dir * 320, behavior: 'smooth' });
+  if (!products.length) return null;
+
+  return (
+    <section className='rounded-2xl border border-gray-100 bg-white p-5 shadow-sm'>
+      <div className='flex items-end justify-between mb-5'>
         <div>
-          <p className='text-xs font-semibold uppercase tracking-[0.24em] text-[#a6806f]'>
-            Recommended for You
-          </p>
-          <h2 className='mt-2 text-2xl font-bold text-[#34160f]'>
-            Curated picks based on your browsing
-          </h2>
+          <p className='text-[11px] font-bold uppercase tracking-widest text-[#a6806f]'>{subtitle}</p>
+          <h2 className='mt-1 text-xl font-extrabold text-[#1a0a07]'>{title}</h2>
+        </div>
+        <div className='flex items-center gap-2'>
+          <button type='button' onClick={() => scroll(-1)} className='h-8 w-8 flex items-center justify-center rounded-full border border-gray-200 text-[#7a1e2c] hover:bg-[#fff1e7] transition-colors'>
+            <ChevronLeft size={16} />
+          </button>
+          <button type='button' onClick={() => scroll(1)} className='h-8 w-8 flex items-center justify-center rounded-full border border-gray-200 text-[#7a1e2c] hover:bg-[#fff1e7] transition-colors'>
+            <ChevronRight size={16} />
+          </button>
+          {onViewAll && (
+            <button type='button' onClick={onViewAll} className='ml-1 flex items-center gap-1 text-xs font-semibold text-[#7a1e2c] hover:underline'>
+              View all <ArrowRight size={12} />
+            </button>
+          )}
         </div>
       </div>
-
-      <div className='mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3'>
-        {recommendedProducts.map((item) => (
-          <ProductPreviewCard
-            key={item.id}
-            item={item}
-            onOpen={onOpenProduct}
-            onAddToCart={onAddToCart}
-          />
+      <div ref={ref} className='flex gap-4 overflow-x-auto pb-1' style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+        {products.map((item) => (
+          <div key={item.id} className='w-[220px] shrink-0'>
+            <ProductCard item={item} onOpen={onOpen} onAddToCart={onAddToCart} onChatSeller={onChatSeller} />
+          </div>
         ))}
       </div>
     </section>
-  </div>
+  );
+};
+
+// ── All products grid ─────────────────────────────────────────────────────────
+const AllProductsGrid = ({ products, onOpen, onAddToCart, onChatSeller, onViewAll }) => {
+  if (!products.length) return null;
+  return (
+    <section className='rounded-2xl border border-gray-100 bg-white p-5 shadow-sm'>
+      <div className='flex items-end justify-between mb-5'>
+        <div>
+          <p className='text-[11px] font-bold uppercase tracking-widest text-[#a6806f]'>All Products</p>
+          <h2 className='mt-1 text-xl font-extrabold text-[#1a0a07]'>
+            Complete Collection · <span className='text-[#7a1e2c]'>{products.length} sarees</span>
+          </h2>
+        </div>
+        <button type='button' onClick={onViewAll} className='flex items-center gap-1 text-xs font-semibold text-[#7a1e2c] hover:underline'>
+          Browse all <ArrowRight size={12} />
+        </button>
+      </div>
+      <div className='grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5'>
+        {products.map((item) => (
+          <ProductCard key={item.id} item={item} onOpen={onOpen} onAddToCart={onAddToCart} onChatSeller={onChatSeller} />
+        ))}
+      </div>
+    </section>
+  );
+};
+
+// ── Hero banner ───────────────────────────────────────────────────────────────
+const HeroBanner = ({ onShop, onCustom, totalProducts }) => (
+  <section className='relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#4a0e1c] via-[#7a1e2c] to-[#3d0f1a] px-6 py-8 text-white shadow-xl sm:px-10 sm:py-12'>
+    <div className='absolute -right-16 -top-16 h-64 w-64 rounded-full bg-[#f5d47c]/10 blur-3xl pointer-events-none' />
+    <div className='absolute -bottom-10 -left-10 h-48 w-48 rounded-full bg-white/5 blur-3xl pointer-events-none' />
+    <div className='relative max-w-2xl'>
+      <div className='inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-widest text-[#f5d47c] backdrop-blur-sm mb-4'>
+        <Sparkles size={11} /> Handcrafted Paithani Sarees
+      </div>
+      <h1 className='font-serif text-3xl font-bold leading-tight sm:text-4xl lg:text-5xl'>
+        Discover authentic <span className='text-[#f5d47c]'>Paithani sarees</span> from master weavers.
+      </h1>
+      <p className='mt-4 text-sm leading-7 text-white/70 max-w-lg'>
+        Browse {totalProducts}+ handcrafted sarees directly from artisans. Real images, real stock, real prices.
+      </p>
+      <div className='mt-6 flex flex-wrap gap-3'>
+        <button type='button' onClick={onShop} className='inline-flex items-center gap-2 rounded-full bg-[#f5d47c] px-6 py-3 text-sm font-bold text-[#3d0f1a] transition hover:bg-[#f0ca60] active:scale-95'>
+          <ShoppingCart size={15} /> Shop Now
+        </button>
+        <button type='button' onClick={onCustom} className='inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-6 py-3 text-sm font-semibold text-white backdrop-blur-sm transition hover:bg-white/15'>
+          Custom Design <ArrowRight size={14} />
+        </button>
+      </div>
+    </div>
+  </section>
 );
 
+// ── HomeTab ───────────────────────────────────────────────────────────────────
+const HomeTab = ({ products, onBrowseCollection, onOpenProduct, onCustomRequest, onAddToCart, onChatSeller }) => {
+  const inStock = products.filter((p) => p.stock > 0);
+  const outOfStock = products.filter((p) => p.stock === 0);
+  const customizable = products.filter((p) => p.isCustomizationAvailable);
+  const newArrivals = [...products].reverse().slice(0, 10);
+
+  return (
+    <div className='space-y-5'>
+      <HeroBanner onShop={onBrowseCollection} onCustom={onCustomRequest} totalProducts={products.length} />
+
+      {products.length > 0 && (
+        <div className='grid grid-cols-2 gap-3 sm:grid-cols-4'>
+          {[
+            { label: 'Total Products', value: products.length, color: 'bg-[#fff1e7] text-[#7a1e2c]' },
+            { label: 'In Stock', value: inStock.length, color: 'bg-[#f0fdf4] text-emerald-700' },
+            { label: 'Out of Stock', value: outOfStock.length, color: 'bg-[#fef2f2] text-red-600' },
+            { label: 'Customizable', value: customizable.length, color: 'bg-[#fffbeb] text-amber-700' },
+          ].map((s) => (
+            <div key={s.label} className={`rounded-xl p-4 ${s.color} border border-current/10`}>
+              <p className='text-2xl font-extrabold'>{s.value}</p>
+              <p className='text-xs font-semibold mt-0.5 opacity-80'>{s.label}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <ScrollSection
+        title='New Arrivals' subtitle='Just added'
+        products={newArrivals} onOpen={onOpenProduct}
+        onAddToCart={onAddToCart} onChatSeller={onChatSeller}
+        onViewAll={onBrowseCollection}
+      />
+
+      {customizable.length > 0 && (
+        <ScrollSection
+          title='Make It Yours' subtitle='Customizable sarees'
+          products={customizable} onOpen={onOpenProduct}
+          onAddToCart={onAddToCart} onChatSeller={onChatSeller}
+        />
+      )}
+
+      <AllProductsGrid
+        products={products} onOpen={onOpenProduct}
+        onAddToCart={onAddToCart} onChatSeller={onChatSeller}
+        onViewAll={onBrowseCollection}
+      />
+    </div>
+  );
+};
+
+// ── Main CustomerDashboard ────────────────────────────────────────────────────
 const CustomerDashboard = () => {
   const { logout } = useAuth();
   const navigate = useNavigate();
@@ -486,11 +388,17 @@ const CustomerDashboard = () => {
   const [activeTab, setActiveTab] = useState('home');
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedSeller, setSelectedSeller] = useState('');
-  const [cartCount, setCartCount] = useState(2);
+  const [chatTarget, setChatTarget] = useState(null); // { sellerId, sellerName }
+  const [cartCount, setCartCount] = useState(0);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [products, setProducts] = useState([]);
 
-  // Listen to NewMessageNotification for unread badge
+  useEffect(() => {
+    GetAllProductData(getUserId())
+      .then((res) => setProducts(normalizeProducts(res)))
+      .catch(() => {});
+  }, []);
+
   useEffect(() => {
     if (!connection) return;
     const handler = () => setUnreadCount((prev) => prev + 1);
@@ -498,7 +406,6 @@ const CustomerDashboard = () => {
     return () => connection.off('NewMessageNotification', handler);
   }, [connection]);
 
-  // Reset unread count when user opens messages tab
   useEffect(() => {
     if (activeTab === 'messages') setUnreadCount(0);
   }, [activeTab]);
@@ -506,36 +413,24 @@ const CustomerDashboard = () => {
   const handleLogout = () => {
     disconnectChatHub();
     logout();
-    localStorage.removeItem('login');
-    localStorage.removeItem('token');
-    localStorage.removeItem('UserId');
-    localStorage.removeItem('RoleId');
+    ['login', 'token', 'UserId', 'RoleId'].forEach((k) => localStorage.removeItem(k));
     showApiSuccess('Logged out successfully');
     window.setTimeout(() => navigate('/'), 300);
   };
 
-  const handleViewDetail = (product) => {
-    setSelectedProduct(product);
-    setActiveTab('product-detail');
-  };
+  const handleViewDetail = (product) => { setSelectedProduct(product); setActiveTab('product-detail'); };
+  const handleAddToCart = () => { setCartCount((c) => c + 1); setActiveTab('cart'); };
 
-  const handleAddToCart = () => {
-    setCartCount((prev) => prev + 1);
-    setActiveTab('cart');
-  };
-
-  const handleMessageArtisan = (seller) => {
-    setSelectedSeller(seller);
+  // Called from product card Chat button — passes sellerUserId + sellerName
+  const handleChatSeller = ({ sellerId, sellerName }) => {
+    setChatTarget({ sellerId, sellerName });
     setActiveTab('messages');
     setUnreadCount(0);
   };
 
   const customerTitle = useMemo(() => {
-    if (activeTab === 'product-detail') {
-      return 'Product Details | Majhi Paithani';
-    }
-
-    const map = {
+    if (activeTab === 'product-detail') return 'Product Details | Majhi Paithani';
+    return ({
       home: 'Customer Home | Majhi Paithani',
       categories: 'Shop Sarees | Majhi Paithani',
       custom: 'Custom Design | Majhi Paithani',
@@ -544,9 +439,7 @@ const CustomerDashboard = () => {
       orders: 'My Orders | Majhi Paithani',
       messages: 'Messages | Majhi Paithani',
       profile: 'My Profile | Majhi Paithani',
-    };
-
-    return map[activeTab] || 'Majhi Paithani';
+    })[activeTab] || 'Majhi Paithani';
   }, [activeTab]);
 
   const renderContent = () => {
@@ -554,60 +447,53 @@ const CustomerDashboard = () => {
       return (
         <ProductDetail
           product={selectedProduct}
-          onBack={() => {
-            setActiveTab('categories');
-            setSelectedProduct(null);
-          }}
+          onBack={() => { setActiveTab('categories'); setSelectedProduct(null); }}
           onAddToCart={handleAddToCart}
           onBuyNow={() => setActiveTab('checkout')}
           onCustomRequest={() => setActiveTab('custom')}
         />
       );
     }
-
     switch (activeTab) {
       case 'home':
         return (
           <HomeTab
+            products={products}
             onBrowseCollection={() => setActiveTab('categories')}
             onOpenProduct={handleViewDetail}
             onCustomRequest={() => setActiveTab('custom')}
             onAddToCart={handleAddToCart}
-            onMessageArtisan={handleMessageArtisan}
+            onChatSeller={handleChatSeller}
           />
         );
       case 'categories':
-        return (
-          <Categories
-            onViewDetail={handleViewDetail}
-            searchTerm={searchTerm}
-          />
-        );
+        return <Categories onViewDetail={handleViewDetail} searchTerm={searchTerm} />;
       case 'custom':
         return <CustomDesign />;
       case 'cart':
         return <Cart onCheckout={() => setActiveTab('checkout')} />;
       case 'checkout':
-        return (
-          <Checkout
-            onBack={() => setActiveTab('cart')}
-            onSuccess={() => setActiveTab('orders')}
-          />
-        );
+        return <Checkout onBack={() => setActiveTab('cart')} onSuccess={() => setActiveTab('orders')} />;
       case 'orders':
         return <Orders />;
       case 'messages':
-        return <Messages initialSeller={selectedSeller} />;
+        return (
+          <Messages
+            initialReceiverId={chatTarget?.sellerId}
+            initialReceiverName={chatTarget?.sellerName}
+          />
+        );
       case 'profile':
         return <Profile onLogout={handleLogout} />;
       default:
         return (
           <HomeTab
+            products={products}
             onBrowseCollection={() => setActiveTab('categories')}
             onOpenProduct={handleViewDetail}
             onCustomRequest={() => setActiveTab('custom')}
             onAddToCart={handleAddToCart}
-            onMessageArtisan={handleMessageArtisan}
+            onChatSeller={handleChatSeller}
           />
         );
     }

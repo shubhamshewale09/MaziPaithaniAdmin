@@ -22,7 +22,6 @@ const formatTime = (dateStr) => {
   }
 };
 
-// ChatWindow accepts roomId now — passes it to useChat for history lookup
 const ChatWindow = ({ senderId, receiverId, receiverName, roomId, onBack }) => {
   const { messages, loading, sendMessage } = useChat(senderId, receiverId, roomId);
   const [input, setInput] = useState('');
@@ -41,11 +40,7 @@ const ChatWindow = ({ senderId, receiverId, receiverName, roomId, onBack }) => {
   return (
     <div className='flex h-[calc(100vh-280px)] min-h-[500px] flex-col'>
       <div className='flex items-center gap-3 border-b border-[#f1e2d8] p-4'>
-        <button
-          type='button'
-          onClick={onBack}
-          className='flex h-10 w-10 items-center justify-center rounded-full bg-[#fff7f2] text-[#7a1e2c] lg:hidden'
-        >
+        <button type='button' onClick={onBack} className='flex h-10 w-10 items-center justify-center rounded-full bg-[#fff7f2] text-[#7a1e2c] lg:hidden'>
           <ArrowLeft size={16} />
         </button>
         <div className='flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-[#7a1e2c] to-[#c28b1e] text-sm font-bold text-white'>
@@ -57,7 +52,7 @@ const ChatWindow = ({ senderId, receiverId, receiverName, roomId, onBack }) => {
         </div>
       </div>
 
-      <div className='flex-1 space-y-3 overflow-y-auto bg-[#fffaf6] p-4 [-ms-overflow-style:none] [scrollbar-width:thin]'>
+      <div className='flex-1 space-y-3 overflow-y-auto bg-[#fffaf6] p-4 [scrollbar-width:thin]'>
         {loading ? (
           <Loader />
         ) : messages.length === 0 ? (
@@ -66,18 +61,8 @@ const ChatWindow = ({ senderId, receiverId, receiverName, roomId, onBack }) => {
           messages.map((msg, index) => {
             const isMe = String(msg.iSenderUserId) === String(senderId);
             return (
-              <div
-                key={msg.iMessageId ?? index}
-                className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}
-              >
-                <div
-                  className={[
-                    'max-w-[80%] rounded-[24px] px-4 py-3 text-sm shadow-sm',
-                    isMe
-                      ? 'rounded-br-md bg-[#7a1e2c] text-white'
-                      : 'rounded-bl-md bg-white text-[#34160f]',
-                  ].join(' ')}
-                >
+              <div key={msg.iMessageId ?? index} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
+                <div className={['max-w-[80%] rounded-[24px] px-4 py-3 text-sm shadow-sm', isMe ? 'rounded-br-md bg-[#7a1e2c] text-white' : 'rounded-bl-md bg-white text-[#34160f]'].join(' ')}>
                   <p>{msg.sMessage}</p>
                   <p className={['mt-2 text-[10px]', isMe ? 'text-white/70' : 'text-[#8b6759]'].join(' ')}>
                     {formatTime(msg.dSentDate)}
@@ -99,11 +84,7 @@ const ChatWindow = ({ senderId, receiverId, receiverName, roomId, onBack }) => {
             placeholder='Type a message to the artisan...'
             className='w-full bg-transparent px-2 text-sm text-[#34160f] outline-none placeholder:text-[#b19588]'
           />
-          <button
-            type='button'
-            onClick={handleSend}
-            className='flex h-10 w-10 items-center justify-center rounded-full bg-[#7a1e2c] text-white'
-          >
+          <button type='button' onClick={handleSend} className='flex h-10 w-10 items-center justify-center rounded-full bg-[#7a1e2c] text-white'>
             <Send size={15} />
           </button>
         </div>
@@ -112,26 +93,40 @@ const ChatWindow = ({ senderId, receiverId, receiverName, roomId, onBack }) => {
   );
 };
 
-const Messages = ({ initialSeller }) => {
+// initialReceiverId — sellerUserId from product API (used to open a new chat directly)
+// initialReceiverName — seller name shown in the chat header
+const Messages = ({ initialReceiverId, initialReceiverName }) => {
   const senderId = getLoggedInUserId();
   const { conversations, loading: convLoading } = useConversations();
   const [activeConv, setActiveConv] = useState(null);
 
-  // Auto-open conversation if initialSeller is passed (from artisan card click)
+  // If customer clicked "Chat" on a product card, open that seller directly.
+  // First try to find an existing conversation, otherwise create a virtual one.
   useEffect(() => {
-    if (!initialSeller || conversations.length === 0) return;
+    if (!initialReceiverId) return;
+
+    // Try to match existing conversation by otherUserId
     const match = conversations.find(
-      (c) => c.otherUserName === initialSeller || c.sellerName === initialSeller,
+      (c) => String(c.otherUserId ?? c.receiverId) === String(initialReceiverId),
     );
-    if (match) setActiveConv(match);
-  }, [initialSeller, conversations]);
+
+    if (match) {
+      setActiveConv(match);
+    } else {
+      // No existing conversation — open a fresh chat window directly
+      setActiveConv({
+        roomId: null,
+        otherUserId: initialReceiverId,
+        otherUserName: initialReceiverName ?? 'Seller',
+      });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialReceiverId, initialReceiverName]);
 
   return (
     <div className='space-y-6'>
       <section className='rounded-[32px] border border-[#efdcd2] bg-white p-6 shadow-[0_18px_45px_rgba(94,35,23,0.08)]'>
-        <p className='text-xs font-semibold uppercase tracking-[0.24em] text-[#a6806f]'>
-          Seller conversations
-        </p>
+        <p className='text-xs font-semibold uppercase tracking-[0.24em] text-[#a6806f]'>Seller conversations</p>
         <h1 className='mt-2 text-3xl font-bold text-[#34160f]'>Chat with artisans from one place</h1>
         <p className='mt-3 text-sm leading-7 text-[#8b6759]'>
           Real-time messaging powered by SignalR. Messages sync instantly across devices.
@@ -152,7 +147,7 @@ const Messages = ({ initialSeller }) => {
             ) : conversations.length === 0 ? (
               <div className='p-6 text-center text-sm text-[#b19588]'>No conversations yet.</div>
             ) : (
-              <div className='flex-1 divide-y divide-[#f1e2d8] overflow-y-auto [-ms-overflow-style:none] [scrollbar-width:thin]'>
+              <div className='flex-1 divide-y divide-[#f1e2d8] overflow-y-auto [scrollbar-width:thin]'>
                 {conversations.map((conv) => {
                   const name = conv.otherUserName ?? conv.sellerName ?? '?';
                   const isActive = activeConv?.roomId === conv.roomId;
@@ -161,10 +156,7 @@ const Messages = ({ initialSeller }) => {
                       key={conv.roomId}
                       type='button'
                       onClick={() => setActiveConv(conv)}
-                      className={[
-                        'flex w-full items-start gap-3 p-4 text-left transition',
-                        isActive ? 'bg-[#fff7f2]' : 'hover:bg-[#fffaf6]',
-                      ].join(' ')}
+                      className={['flex w-full items-start gap-3 p-4 text-left transition', isActive ? 'bg-[#fff7f2]' : 'hover:bg-[#fffaf6]'].join(' ')}
                     >
                       <div className='flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#7a1e2c] to-[#c28b1e] text-sm font-bold text-white'>
                         {name[0]}
@@ -172,21 +164,19 @@ const Messages = ({ initialSeller }) => {
                       <div className='min-w-0 flex-1'>
                         <div className='flex items-center justify-between gap-2'>
                           <p className='truncate text-sm font-semibold text-[#34160f]'>{name}</p>
-                          {conv.lastMessageTime ? (
-                            <span className='shrink-0 text-[10px] text-[#8b6759]'>
-                              {formatTime(conv.lastMessageTime)}
-                            </span>
-                          ) : null}
+                          {conv.lastMessageTime && (
+                            <span className='shrink-0 text-[10px] text-[#8b6759]'>{formatTime(conv.lastMessageTime)}</span>
+                          )}
                         </div>
-                        {conv.lastMessage ? (
+                        {conv.lastMessage && (
                           <p className='mt-1 truncate text-xs text-[#8b6759]'>{conv.lastMessage}</p>
-                        ) : null}
+                        )}
                       </div>
-                      {conv.unreadCount > 0 ? (
+                      {conv.unreadCount > 0 && (
                         <span className='flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[#7a1e2c] px-1 text-[10px] font-bold text-white'>
                           {conv.unreadCount}
                         </span>
-                      ) : null}
+                      )}
                     </button>
                   );
                 })}
@@ -197,7 +187,7 @@ const Messages = ({ initialSeller }) => {
           {/* Chat area */}
           {activeConv ? (
             <ChatWindow
-              key={activeConv.roomId}
+              key={`${activeConv.roomId}-${activeConv.otherUserId}`}
               senderId={senderId}
               receiverId={activeConv.otherUserId ?? activeConv.receiverId}
               receiverName={activeConv.otherUserName ?? activeConv.sellerName}
@@ -207,13 +197,9 @@ const Messages = ({ initialSeller }) => {
           ) : (
             <div className='hidden h-full flex-1 items-center justify-center bg-[#fffaf6] p-10 text-center lg:flex'>
               <div>
-                <div className='mx-auto flex h-16 w-16 items-center justify-center rounded-[24px] bg-white text-2xl shadow-sm'>
-                  💬
-                </div>
+                <div className='mx-auto flex h-16 w-16 items-center justify-center rounded-[24px] bg-white text-2xl shadow-sm'>💬</div>
                 <p className='mt-4 text-lg font-bold text-[#34160f]'>Select a conversation</p>
-                <p className='mt-2 text-sm text-[#8b6759]'>
-                  Choose any artisan from the left to continue chatting.
-                </p>
+                <p className='mt-2 text-sm text-[#8b6759]'>Choose any artisan from the left to continue chatting.</p>
               </div>
             </div>
           )}
