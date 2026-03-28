@@ -64,9 +64,22 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             powershell -Command "
-              $source = 'C:\inetpub\ReactApp';
-              $backup = 'C:\inetpub\backup_ReactApp_' + (Get-Date -Format 'yyyyMMdd_HHmmss') + '.zip';
-              Compress-Archive -Path $source\* -DestinationPath $backup -Force
+              $source = 'C:\inetpub\ReactApp'
+              $backupDir = 'C:\inetpub\backups'
+
+              if (!(Test-Path $backupDir)) {
+                New-Item -ItemType Directory -Path $backupDir
+              }
+
+              $timestamp = Get-Date -Format 'yyyyMMdd_HHmmss'
+              $backupFile = Join-Path $backupDir ('ReactApp_' + $timestamp + '.zip')
+
+              if (Test-Path $source) {
+                Compress-Archive -Path $source\* -DestinationPath $backupFile -Force
+                Write-Output 'Backup created at:' $backupFile
+              } else {
+                Write-Output 'Source folder not found'
+              }
             "
 
       # ✅ Upload Build
