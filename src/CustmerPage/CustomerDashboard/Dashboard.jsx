@@ -7,10 +7,12 @@ import {
   MessageCircle,
   Package,
   ShoppingCart,
+  SlidersHorizontal,
   Sparkles,
   Star,
   Store,
   Tag,
+  X,
   Zap,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -190,50 +192,50 @@ const ProductCard = ({ item, onOpen, onAddToCart, onChatSeller }) => {
         </div>
 
         <div className='flex items-center justify-between mt-2'>
-          <p className='text-base font-extrabold text-[#7a1e2c]'>₹{item.price.toLocaleString('en-IN')}</p>
-          <span className='flex items-center gap-0.5 text-[11px] font-semibold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full'>
-            <Star size={10} fill='currentColor' /> 4.8
-          </span>
-        </div>
-
-        {/* Action buttons: Add to Cart | View | Chat Seller */}
-        <div className='mt-3 flex gap-1.5'>
-          <button
-            type='button'
-            onClick={handleAddToCart}
-            disabled={isOutOfStock}
-            className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 ${
-              isOutOfStock
-                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                : added
-                ? 'bg-emerald-600 text-white scale-95'
-                : 'bg-[#7a1e2c] text-white hover:bg-[#651623] active:scale-95'
-            }`}
-          >
-            <ShoppingCart size={13} />
-            {added ? 'Added!' : isOutOfStock ? 'Unavailable' : 'Add to Cart'}
-          </button>
-
-          <button
-            type='button'
-            onClick={() => onOpen(item)}
-            title='View details'
-            className='flex items-center justify-center px-2.5 py-2.5 rounded-xl border border-[#e8d5cc] text-[#7a1e2c] hover:bg-[#fff1e7] transition-colors'
-          >
-            <Zap size={13} />
-          </button>
-
-          {item.sellerUserId && (
+          <div>
+            <p className='text-base font-extrabold text-[#7a1e2c]'>₹{item.price.toLocaleString('en-IN')}</p>
+            <span className='flex items-center gap-0.5 text-[10px] font-semibold text-amber-600'>
+              <Star size={9} fill='currentColor' /> 4.8
+            </span>
+          </div>
+          <div className='flex items-center gap-1'>
             <button
               type='button'
-              onClick={handleChat}
-              title={`Chat with ${item.seller || 'seller'}`}
-              className='flex items-center justify-center px-2.5 py-2.5 rounded-xl border border-[#e8d5cc] text-[#7a1e2c] hover:bg-[#fff1e7] transition-colors'
+              onClick={() => onOpen(item)}
+              title='View details'
+              className='flex items-center justify-center h-8 w-8 rounded-xl border border-[#e8d5cc] text-[#7a1e2c] hover:bg-[#fff1e7] transition-colors'
             >
-              <MessageCircle size={13} />
+              <Zap size={13} />
             </button>
-          )}
+            {item.sellerUserId && (
+              <button
+                type='button'
+                onClick={handleChat}
+                title={`Chat with ${item.seller || 'seller'}`}
+                className='flex items-center justify-center h-8 w-8 rounded-xl border border-[#e8d5cc] text-[#7a1e2c] hover:bg-[#fff1e7] transition-colors'
+              >
+                <MessageCircle size={13} />
+              </button>
+            )}
+          </div>
         </div>
+
+        {/* Add to Cart — full width, always visible */}
+        <button
+          type='button'
+          onClick={handleAddToCart}
+          disabled={isOutOfStock}
+          className={`mt-2.5 w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 ${
+            isOutOfStock
+              ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+              : added
+              ? 'bg-emerald-600 text-white scale-95'
+              : 'bg-[#7a1e2c] text-white hover:bg-[#651623] active:scale-95'
+          }`}
+        >
+          <ShoppingCart size={13} />
+          {added ? 'Added!' : isOutOfStock ? 'Unavailable' : 'Add to Cart'}
+        </button>
       </div>
     </div>
   );
@@ -279,7 +281,13 @@ const ScrollSection = ({ title, subtitle, products, onOpen, onAddToCart, onChatS
 
 // ── All products grid ─────────────────────────────────────────────────────────
 const AllProductsGrid = ({ products, onOpen, onAddToCart, onChatSeller, onViewAll }) => {
-  if (!products.length) return null;
+  if (!products.length) return (
+    <div className='rounded-2xl border border-dashed border-[#ddc6bb] bg-white px-6 py-14 text-center'>
+      <Package size={40} className='mx-auto text-[#d4b5a8] mb-3' />
+      <p className='text-base font-bold text-[#34160f]'>No products match your filters</p>
+      <p className='mt-1 text-sm text-[#8b6759]'>Try adjusting or clearing the filters.</p>
+    </div>
+  );
   return (
     <section className='rounded-2xl border border-gray-100 bg-white p-5 shadow-sm'>
       <div className='flex items-end justify-between mb-5'>
@@ -293,7 +301,10 @@ const AllProductsGrid = ({ products, onOpen, onAddToCart, onChatSeller, onViewAl
           Browse all <ArrowRight size={12} />
         </button>
       </div>
-      <div className='grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5'>
+      <div
+        className='grid gap-3'
+        style={{ gridTemplateColumns: `repeat(${Math.min(products.length, 4)}, minmax(0, 280px))`, justifyContent: 'start' }}
+      >
         {products.map((item) => (
           <ProductCard key={item.id} item={item} onOpen={onOpen} onAddToCart={onAddToCart} onChatSeller={onChatSeller} />
         ))}
@@ -329,53 +340,202 @@ const HeroBanner = ({ onShop, onCustom, totalProducts }) => (
   </section>
 );
 
+// ── Filter helpers ────────────────────────────────────────────────────────────
+const FilterChip = ({ active, children, onClick }) => (
+  <button
+    type='button'
+    onClick={onClick}
+    className={[
+      'rounded-full border px-3 py-1.5 text-xs font-semibold transition',
+      active
+        ? 'border-[#7a1e2c] bg-[#7a1e2c] text-white'
+        : 'border-[#ead9cf] bg-white text-[#6b5048] hover:border-[#7a1e2c] hover:text-[#7a1e2c]',
+    ].join(' ')}
+  >
+    {children}
+  </button>
+);
+
+const buildFilterSections = (products) => [
+  { key: 'color',  label: 'Color',  options: [...new Set(products.map((p) => p.color).filter(Boolean))] },
+  { key: 'fabric', label: 'Fabric', options: [...new Set(products.map((p) => p.fabric).filter(Boolean))] },
+  { key: 'design', label: 'Design', options: [...new Set(products.map((p) => p.design).filter(Boolean))] },
+];
+
+const FilterPanel = ({ products, filters, maxPrice, onToggle, onPriceChange, onClear }) => {
+  const sections = useMemo(() => buildFilterSections(products), [products]);
+  const maxPossible = useMemo(() => Math.max(35000, ...products.map((p) => p.price)), [products]);
+
+  return (
+    <div className='rounded-[28px] border border-[#efdcd2] bg-white p-5 shadow-sm'>
+      <div className='flex items-center justify-between gap-3'>
+        <div>
+          <p className='text-xs font-semibold uppercase tracking-[0.24em] text-[#a6806f]'>Filter Sarees</p>
+          <p className='mt-1 text-base font-bold text-[#34160f]'>Refine results</p>
+        </div>
+        <button type='button' onClick={onClear} className='text-xs font-semibold text-[#7a1e2c]'>Clear all</button>
+      </div>
+
+      <div className='mt-5'>
+        <label className='block text-sm font-semibold text-[#34160f]'>Budget</label>
+        <p className='mt-2 text-sm text-[#8b6759]'>
+          Up to <span className='font-bold text-[#7a1e2c]'>₹{maxPrice.toLocaleString('en-IN')}</span>
+        </p>
+        <input
+          type='range' min={0} max={maxPossible} step={500}
+          value={maxPrice}
+          onChange={(e) => onPriceChange(Number(e.target.value))}
+          className='mt-3 w-full accent-[#7a1e2c]'
+        />
+        <div className='mt-1 flex justify-between text-xs text-[#a6806f]'>
+          <span>₹0</span><span>₹{maxPossible.toLocaleString('en-IN')}</span>
+        </div>
+      </div>
+
+      <div className='mt-5 space-y-4'>
+        {sections.map((section) =>
+          section.options.length === 0 ? null : (
+            <div key={section.key}>
+              <p className='text-sm font-semibold text-[#34160f]'>{section.label}</p>
+              <div className='mt-2 flex flex-wrap gap-2'>
+                {section.options.map((opt) => (
+                  <FilterChip
+                    key={opt}
+                    active={filters[section.key].includes(opt)}
+                    onClick={() => onToggle(section.key, opt)}
+                  >
+                    {opt}
+                  </FilterChip>
+                ))}
+              </div>
+            </div>
+          )
+        )}
+      </div>
+    </div>
+  );
+};
+
 // ── HomeTab ───────────────────────────────────────────────────────────────────
 const HomeTab = ({ products, onBrowseCollection, onOpenProduct, onCustomRequest, onAddToCart, onChatSeller }) => {
-  const inStock = products.filter((p) => p.stock > 0);
-  const outOfStock = products.filter((p) => p.stock === 0);
-  const customizable = products.filter((p) => p.isCustomizationAvailable);
-  const newArrivals = [...products].reverse().slice(0, 10);
+  const [filters, setFilters] = useState({ color: [], fabric: [], design: [] });
+  const [maxPrice, setMaxPrice] = useState(() => Math.max(35000, ...products.map((p) => p.price)));
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
+
+  const maxPossible = useMemo(() => Math.max(35000, ...products.map((p) => p.price)), [products]);
+
+  // sync maxPrice ceiling when products load
+  useEffect(() => { setMaxPrice(maxPossible); }, [maxPossible]);
+
+  const toggleFilter = (key, value) =>
+    setFilters((prev) => ({
+      ...prev,
+      [key]: prev[key].includes(value) ? prev[key].filter((v) => v !== value) : [...prev[key], value],
+    }));
+
+  const clearFilters = () => { setFilters({ color: [], fabric: [], design: [] }); setMaxPrice(maxPossible); };
+
+  const filtered = useMemo(
+    () =>
+      products.filter((p) => {
+        if (filters.color.length  && !filters.color.includes(p.color))   return false;
+        if (filters.fabric.length && !filters.fabric.includes(p.fabric)) return false;
+        if (filters.design.length && !filters.design.includes(p.design)) return false;
+        if (p.price > maxPrice) return false;
+        return true;
+      }),
+    [products, filters, maxPrice],
+  );
+
+  const inStock     = filtered.filter((p) => p.stock > 0);
+  const outOfStock  = filtered.filter((p) => p.stock === 0);
+  const customizable = filtered.filter((p) => p.isCustomizationAvailable);
+  const newArrivals  = [...filtered].reverse().slice(0, 10);
+
+  const filterPanelProps = { products, filters, maxPrice, onToggle: toggleFilter, onPriceChange: setMaxPrice, onClear: clearFilters };
 
   return (
     <div className='space-y-5'>
-      <HeroBanner onShop={onBrowseCollection} onCustom={onCustomRequest} totalProducts={products.length} />
+      {/* Two-column layout wraps everything below the hero */}
+      <div className='grid gap-5 lg:grid-cols-[260px_1fr]'>
 
-      {products.length > 0 && (
-        <div className='grid grid-cols-2 gap-3 sm:grid-cols-4'>
-          {[
-            { label: 'Total Products', value: products.length, color: 'bg-[#fff1e7] text-[#7a1e2c]' },
-            { label: 'In Stock', value: inStock.length, color: 'bg-[#f0fdf4] text-emerald-700' },
-            { label: 'Out of Stock', value: outOfStock.length, color: 'bg-[#fef2f2] text-red-600' },
-            { label: 'Customizable', value: customizable.length, color: 'bg-[#fffbeb] text-amber-700' },
-          ].map((s) => (
-            <div key={s.label} className={`rounded-xl p-4 ${s.color} border border-current/10`}>
-              <p className='text-2xl font-extrabold'>{s.value}</p>
-              <p className='text-xs font-semibold mt-0.5 opacity-80'>{s.label}</p>
+        {/* ── Left: filter sidebar (desktop) ── */}
+        <aside className='hidden lg:block'>
+          <div className='sticky top-24 space-y-4'>
+            <FilterPanel {...filterPanelProps} />
+          </div>
+        </aside>
+
+        {/* ── Right: all content ── */}
+        <div className='min-w-0 space-y-5'>
+          <HeroBanner onShop={onBrowseCollection} onCustom={onCustomRequest} totalProducts={products.length} />
+
+          {products.length > 0 && (
+            <div className='grid grid-cols-2 gap-3 sm:grid-cols-4'>
+              {[
+                { label: 'Total Products', value: products.length, color: 'bg-[#fff1e7] text-[#7a1e2c]' },
+                { label: 'In Stock',       value: inStock.length,  color: 'bg-[#f0fdf4] text-emerald-700' },
+                { label: 'Out of Stock',   value: outOfStock.length, color: 'bg-[#fef2f2] text-red-600' },
+                { label: 'Customizable',   value: customizable.length, color: 'bg-[#fffbeb] text-amber-700' },
+              ].map((s) => (
+                <div key={s.label} className={`rounded-xl p-4 ${s.color} border border-current/10`}>
+                  <p className='text-2xl font-extrabold'>{s.value}</p>
+                  <p className='text-xs font-semibold mt-0.5 opacity-80'>{s.label}</p>
+                </div>
+              ))}
             </div>
-          ))}
+          )}
+
+          {/* Mobile filter toggle */}
+          <div className='flex items-center justify-between lg:hidden'>
+            <p className='text-sm font-semibold text-[#34160f]'>{filtered.length} products</p>
+            <button
+              type='button'
+              onClick={() => setShowMobileFilters(true)}
+              className='inline-flex items-center gap-2 rounded-full border border-[#ead9cf] bg-white px-4 py-2.5 text-sm font-semibold text-[#7a1e2c]'
+            >
+              <SlidersHorizontal size={15} /> Filters
+            </button>
+          </div>
+
+          <ScrollSection
+            title='New Arrivals' subtitle='Just added'
+            products={newArrivals} onOpen={onOpenProduct}
+            onAddToCart={onAddToCart} onChatSeller={onChatSeller}
+            onViewAll={onBrowseCollection}
+          />
+
+          {customizable.length > 0 && (
+            <ScrollSection
+              title='Make It Yours' subtitle='Customizable sarees'
+              products={customizable} onOpen={onOpenProduct}
+              onAddToCart={onAddToCart} onChatSeller={onChatSeller}
+            />
+          )}
+
+          <AllProductsGrid
+            products={filtered} onOpen={onOpenProduct}
+            onAddToCart={onAddToCart} onChatSeller={onChatSeller}
+            onViewAll={onBrowseCollection}
+          />
+        </div>
+      </div>
+
+      {/* Mobile filter drawer */}
+      {showMobileFilters && (
+        <div className='fixed inset-0 z-50 flex lg:hidden'>
+          <button type='button' className='absolute inset-0 bg-black/40' onClick={() => setShowMobileFilters(false)} aria-label='Close filters' />
+          <div className='relative ml-auto h-full w-full max-w-sm overflow-y-auto bg-[#f7efe8] p-4'>
+            <div className='mb-4 flex items-center justify-between'>
+              <p className='text-lg font-bold text-[#34160f]'>Filters</p>
+              <button type='button' onClick={() => setShowMobileFilters(false)} className='flex h-10 w-10 items-center justify-center rounded-full bg-white text-[#7a1e2c]'>
+                <X size={16} />
+              </button>
+            </div>
+            <FilterPanel {...filterPanelProps} />
+          </div>
         </div>
       )}
-
-      <ScrollSection
-        title='New Arrivals' subtitle='Just added'
-        products={newArrivals} onOpen={onOpenProduct}
-        onAddToCart={onAddToCart} onChatSeller={onChatSeller}
-        onViewAll={onBrowseCollection}
-      />
-
-      {customizable.length > 0 && (
-        <ScrollSection
-          title='Make It Yours' subtitle='Customizable sarees'
-          products={customizable} onOpen={onOpenProduct}
-          onAddToCart={onAddToCart} onChatSeller={onChatSeller}
-        />
-      )}
-
-      <AllProductsGrid
-        products={products} onOpen={onOpenProduct}
-        onAddToCart={onAddToCart} onChatSeller={onChatSeller}
-        onViewAll={onBrowseCollection}
-      />
     </div>
   );
 };
@@ -418,7 +578,11 @@ const CustomerDashboard = () => {
     window.setTimeout(() => navigate('/'), 300);
   };
 
-  const handleViewDetail = (product) => { setSelectedProduct(product); setActiveTab('product-detail'); };
+  const [previousTab, setPreviousTab] = useState('home');
+
+  useEffect(() => { window.scrollTo({ top: 0, behavior: 'smooth' }); }, [activeTab]);
+
+  const handleViewDetail = (product) => { setPreviousTab(activeTab); setSelectedProduct(product); setActiveTab('product-detail'); };
   const handleAddToCart = () => { setCartCount((c) => c + 1); setActiveTab('cart'); };
 
   // Called from product card Chat button — passes sellerUserId + sellerName
@@ -447,10 +611,11 @@ const CustomerDashboard = () => {
       return (
         <ProductDetail
           product={selectedProduct}
-          onBack={() => { setActiveTab('categories'); setSelectedProduct(null); }}
+          onBack={() => { setActiveTab(previousTab); setSelectedProduct(null); }}
           onAddToCart={handleAddToCart}
           onBuyNow={() => setActiveTab('checkout')}
           onCustomRequest={() => setActiveTab('custom')}
+          onChatSeller={handleChatSeller}
         />
       );
     }
