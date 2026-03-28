@@ -241,7 +241,7 @@ const CustomerLayout = ({
         )}
       </header>
 
-      <main className='px-4 pb-28 pt-6 sm:px-6 lg:px-8 lg:pb-10'>
+      <main className='px-4 pt-5 pb-24 sm:px-6 lg:px-8 lg:pb-8'>
         <div className='mx-auto max-w-7xl'>{children}</div>
       </main>
 
