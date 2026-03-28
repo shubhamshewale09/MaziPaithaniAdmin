@@ -28,7 +28,7 @@ jobs:
       - name: 🏗️ Build React App
         run: CI=false npm run build
 
-      # ✅ Debug
+      # ✅ Debug Build Output
       - name: 📂 Show Build Folder
         run: |
           echo "Build folder contents:"
@@ -55,7 +55,7 @@ jobs:
           script: |
             powershell -Command "Import-Module WebAdministration; if ((Get-WebAppPoolState -Name 'Demo').Value -eq 'Started') { Stop-WebAppPool -Name 'Demo' }"
 
-      # ✅ Backup Existing Files
+      # ✅ Backup Existing Files (FIXED ✅)
       - name: 📦 Backup Existing Files
         uses: appleboy/ssh-action@v1.0.0
         with:
@@ -63,22 +63,24 @@ jobs:
           username: Administrator
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            $source = "C:\inetpub\ReactApp"
-            $backupDir = "C:\inetpub\backups"
+            powershell -Command "
+              $source = 'C:\inetpub\ReactApp';
+              $backupDir = 'C:\inetpub\backups';
 
-            if (!(Test-Path $backupDir)) {
-              New-Item -ItemType Directory -Path $backupDir
-            }
+              if (!(Test-Path $backupDir)) {
+                New-Item -ItemType Directory -Path $backupDir;
+              }
 
-            $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
-            $backupFile = "$backupDir\ReactApp_$timestamp.zip"
+              $timestamp = Get-Date -Format 'yyyyMMdd_HHmmss';
+              $backupFile = $backupDir + '\ReactApp_' + $timestamp + '.zip';
 
-            if (Test-Path $source) {
-              Compress-Archive -Path "$source\*" -DestinationPath $backupFile -Force
-              Write-Output "Backup created at: $backupFile"
-            } else {
-              Write-Output "Source folder not found"
-            }
+              if (Test-Path $source) {
+                Compress-Archive -Path ($source + '\*') -DestinationPath $backupFile -Force;
+                Write-Output 'Backup created at:' $backupFile;
+              } else {
+                Write-Output 'Source folder not found';
+              }
+            "
 
       # ✅ Upload Build
       - name: 🚀 Upload Build
