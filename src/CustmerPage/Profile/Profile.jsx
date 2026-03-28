@@ -1,297 +1,437 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
-  Edit3,
-  Heart,
-  LogOut,
-  MapPin,
-  Package,
-  Plus,
-  Star,
-  Trash2,
-  User,
+  Edit3, LogOut, MapPin, Plus, Trash2,
+  User, Mail, Phone, CheckCircle2, Home, Briefcase, Save, X,
 } from 'lucide-react';
-
-import { showApiSuccess } from '../../Utils/Utils';
+import { showApiSuccess, showApiError } from '../../Utils/Utils';
+import { updateCustomerProfile, addAddress } from '../../ServiceCustmer/Profile/ProfileApi';
 
 const TABS = [
-  { id: 'details', label: 'Details', icon: User },
-  { id: 'addresses', label: 'Addresses', icon: MapPin },
-  { id: 'wishlist', label: 'Wishlist', icon: Heart },
-  { id: 'history', label: 'Orders', icon: Package },
+  { id: 'details',   label: 'My Details', icon: User   },
+  { id: 'addresses', label: 'Addresses',  icon: MapPin },
 ];
 
-const INITIAL_WISHLIST = [
-  { id: 1, name: 'Peacock Motif Paithani', seller: 'Ravi Handlooms', price: 'Rs 14,500', rating: 4.8 },
-  { id: 2, name: 'Bridal Gold Border', seller: 'Sunita Weaves', price: 'Rs 28,000', rating: 4.9 },
-];
+const inputCls =
+  'w-full rounded-2xl border border-[#ead9cf] bg-white px-4 py-3 text-sm text-[#34160f] outline-none transition focus:border-[#7a1e2c] focus:ring-2 focus:ring-[#7a1e2c]/10 placeholder:text-[#c4a99e]';
 
-const ADDRESSES = [
-  { id: 1, label: 'Home', address: '12 Shivaji Nagar, Pune 411005', phone: '9876543210', default: true },
-  { id: 2, label: 'Office', address: '45 MG Road, Nashik 422001', phone: '9123456789', default: false },
-];
-
-const ORDER_HISTORY = [
-  { id: 'MP-2026-001', product: 'Peacock Motif Paithani', price: 'Rs 14,500', status: 'Delivered', date: '10 Mar 2026' },
-  { id: 'MP-2026-002', product: 'Bridal Gold Border', price: 'Rs 28,000', status: 'Shipped', date: '18 Mar 2026' },
-];
-
-const STATUS_STYLES = {
-  Delivered: 'bg-emerald-100 text-emerald-700',
-  Shipped: 'bg-violet-100 text-violet-700',
-  Pending: 'bg-amber-100 text-amber-700',
-  Accepted: 'bg-blue-100 text-blue-700',
+const getLoginInfo = () => {
+  try { return JSON.parse(localStorage.getItem('login') || '{}'); }
+  catch { return {}; }
 };
 
-const inputClassName =
-  'w-full rounded-[18px] border border-[#ead9cf] bg-[#fffaf6] px-4 py-3 text-sm text-[#34160f] outline-none transition focus:border-[#7a1e2c]';
+const buildAddresses = (info) => {
+  const a = info?.address;
+  if (!a) return [];
+  const line     = [a.addressLine1, a.addressLine2].filter(Boolean).join(', ');
+  const cityState = [a.city, a.state, a.postalCode].filter(Boolean).join(', ');
+  return [{
+    id:      1,
+    label:   a.addressType || 'Address',
+    icon:    a.addressType?.toLowerCase() === 'home' ? Home : Briefcase,
+    address: [line, cityState, a.country].filter(Boolean).join(', '),
+    phone:   info.phoneNumber || '',
+    default: true,
+  }];
+};
 
 const Profile = ({ onLogout }) => {
   const [activeTab, setActiveTab] = useState('details');
   const [isEditing, setIsEditing] = useState(false);
-  const [wishlist, setWishlist] = useState(INITIAL_WISHLIST);
+  const [saving, setSaving]       = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [addSaving, setAddSaving]       = useState(false);
+  const emptyAddrForm = { addressLine1: '', addressLine2: '', city: '', state: '', postalCode: '', country: '', addressType: '', isDefault: false };
+  const [addrForm, setAddrForm] = useState(emptyAddrForm);
+
+  const loginInfo = getLoginInfo();
+
   const [form, setForm] = useState({
-    name: 'Priya Sharma',
-    email: 'priya@example.com',
-    phone: '9876543210',
-    city: 'Pune',
+    firstName:    loginInfo.name?.split(' ')[0]  || '',
+    lastName:     loginInfo.name?.split(' ').slice(1).join(' ') || '',
+    email:        loginInfo.email        || '',
+    phone:        loginInfo.phoneNumber  || '',
+    userId:       loginInfo.userId       || null,
+    profileImage: loginInfo.profileImage || null,
   });
 
-  const updateField = (key, value) =>
-    setForm((prev) => ({
-      ...prev,
-      [key]: value,
-    }));
+  const [addresses, setAddresses] = useState(() => buildAddresses(loginInfo));
 
-  const handleSave = () => {
-    setIsEditing(false);
-    showApiSuccess('Profile updated successfully.');
+  useEffect(() => {
+    const info = getLoginInfo();
+    setForm({
+      firstName:    info.name?.split(' ')[0]  || '',
+      lastName:     info.name?.split(' ').slice(1).join(' ') || '',
+      email:        info.email        || '',
+      phone:        info.phoneNumber  || '',
+      userId:       info.userId       || null,
+      profileImage: info.profileImage || null,
+    });
+    setAddresses(buildAddresses(info));
+  }, []);
+
+  const fullName = [form.firstName, form.lastName].filter(Boolean).join(' ');
+  const avatarLetter = form.firstName?.charAt(0)?.toUpperCase() || 'U';
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await updateCustomerProfile(form.userId, {
+        firstName:   form.firstName,
+        lastName:    form.lastName,
+        email:       form.email,
+        phoneNumber: form.phone,
+      });
+      const stored = getLoginInfo();
+      stored.name = fullName;
+      localStorage.setItem('login', JSON.stringify(stored));
+      setIsEditing(false);
+      showApiSuccess('Profile updated successfully.');
+    } catch (err) {
+      showApiError(err, 'Failed to update profile.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleAddAddress = async (e) => {
+    e.preventDefault();
+    setAddSaving(true);
+    try {
+      await addAddress({ userId: form.userId, ...addrForm });
+      const AddrIcon  = addrForm.addressType?.toLowerCase() === 'home' ? Home : Briefcase;
+      const line      = [addrForm.addressLine1, addrForm.addressLine2].filter(Boolean).join(', ');
+      const cityState = [addrForm.city, addrForm.state, addrForm.postalCode].filter(Boolean).join(', ');
+      setAddresses((prev) => [...prev, {
+        id:      Date.now(),
+        label:   addrForm.addressType || 'Address',
+        icon:    AddrIcon,
+        address: [line, cityState, addrForm.country].filter(Boolean).join(', '),
+        phone:   form.phone,
+        default: addrForm.isDefault,
+      }]);
+      showApiSuccess('Address added successfully.');
+      setShowAddModal(false);
+      setAddrForm(emptyAddrForm);
+    } catch (err) {
+      showApiError(err, 'Failed to add address.');
+    } finally {
+      setAddSaving(false);
+    }
   };
 
   return (
     <div className='space-y-6'>
-      <section className='rounded-[32px] bg-gradient-to-br from-[#5a1220] via-[#7a1e2c] to-[#2f0c12] p-6 text-white shadow-[0_28px_80px_rgba(66,18,28,0.22)] sm:p-8'>
-        <div className='flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between'>
-          <div className='flex items-center gap-4'>
-            <div className='flex h-16 w-16 items-center justify-center rounded-[24px] bg-[#f5d47c] text-2xl font-bold text-[#5a1220] shadow-lg'>
-              {form.name[0]}
+
+      {/* ── Hero ── */}
+      <section className='relative overflow-hidden rounded-[32px] bg-gradient-to-br from-[#4a0e1c] via-[#7a1e2c] to-[#9e3140] p-7 text-white shadow-[0_32px_80px_rgba(66,18,28,0.28)] sm:p-10'>
+        <div className='pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-white/5' />
+        <div className='pointer-events-none absolute -bottom-10 -left-6 h-40 w-40 rounded-full bg-[#c9a227]/10' />
+        <div className='pointer-events-none absolute right-32 bottom-0 h-24 w-24 rounded-full bg-white/5' />
+
+        <div className='relative flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between'>
+          <div className='flex items-center gap-5'>
+            {/* Avatar */}
+            <div className='relative shrink-0'>
+              {form.profileImage ? (
+                <img src={form.profileImage} alt='avatar' className='h-24 w-24 rounded-[28px] object-cover shadow-xl ring-4 ring-white/20' />
+              ) : (
+                <div className='flex h-24 w-24 items-center justify-center rounded-[28px] bg-gradient-to-br from-[#f5d47c] to-[#e8b84b] text-4xl font-bold text-[#5a1220] shadow-xl ring-4 ring-white/20'>
+                  {avatarLetter}
+                </div>
+              )}
+              <div className='absolute -bottom-1.5 -right-1.5 flex h-7 w-7 items-center justify-center rounded-full bg-emerald-400 shadow-lg ring-2 ring-white'>
+                <CheckCircle2 size={14} className='text-white' />
+              </div>
             </div>
+
+            {/* Name + badges */}
             <div>
-              <p className='text-2xl font-bold'>{form.name}</p>
-              <p className='mt-1 text-sm text-white/75'>{form.email}</p>
-              <p className='mt-2 text-xs font-semibold uppercase tracking-[0.24em] text-[#f5d47c]'>
-                Customer profile
-              </p>
+              <p className='text-[11px] font-bold uppercase tracking-[0.3em] text-white/50'>Customer Account</p>
+              <h2 className='mt-1 text-2xl font-bold leading-tight sm:text-3xl'>{fullName || 'Customer'}</h2>
+              <div className='mt-3 flex flex-wrap gap-2'>
+                {form.email && (
+                  <span className='inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 text-xs font-semibold text-white/80 backdrop-blur-sm'>
+                    <Mail size={11} /> {form.email}
+                  </span>
+                )}
+                {form.phone && (
+                  <span className='inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 text-xs font-semibold text-white/80 backdrop-blur-sm'>
+                    <Phone size={11} /> {form.phone}
+                  </span>
+                )}
+              </div>
             </div>
           </div>
 
           <button
             type='button'
             onClick={onLogout}
-            className='inline-flex items-center justify-center gap-2 rounded-full border border-white/20 bg-white/10 px-5 py-3 text-sm font-semibold text-white'
+            className='inline-flex items-center justify-center gap-2 self-start rounded-full border border-white/20 bg-white/10 px-5 py-2.5 text-sm font-semibold text-white backdrop-blur-sm transition hover:bg-white/20 sm:self-auto'
           >
-            <LogOut size={15} />
-            Logout
+            <LogOut size={15} /> Logout
           </button>
         </div>
       </section>
 
-      <div className='flex gap-2 overflow-x-auto pb-1'>
-        {TABS.map((item) => {
-          const Icon = item.icon;
-          const isActive = activeTab === item.id;
-
+      {/* ── Tabs ── */}
+      <div className='flex gap-2'>
+        {TABS.map(({ id, label, icon: Icon }) => {
+          const isActive = activeTab === id;
           return (
             <button
-              key={item.id}
+              key={id}
               type='button'
-              onClick={() => setActiveTab(item.id)}
+              onClick={() => { setActiveTab(id); setIsEditing(false); }}
               className={[
-                'inline-flex shrink-0 items-center gap-2 rounded-full px-4 py-3 text-sm font-semibold transition',
+                'inline-flex items-center gap-2 rounded-2xl px-5 py-3 text-sm font-semibold transition',
                 isActive
-                  ? 'bg-[#7a1e2c] text-white'
-                  : 'border border-[#ead9cf] bg-white text-[#6b5048]',
+                  ? 'bg-[#7a1e2c] text-white shadow-lg shadow-[#7a1e2c]/25'
+                  : 'border border-[#ead9cf] bg-white text-[#6b5048] hover:border-[#7a1e2c] hover:text-[#7a1e2c]',
               ].join(' ')}
             >
-              <Icon size={15} />
-              {item.label}
+              <Icon size={15} /> {label}
             </button>
           );
         })}
       </div>
 
-      <section className='rounded-[32px] border border-[#efdcd2] bg-white p-6 shadow-[0_18px_45px_rgba(94,35,23,0.08)]'>
-        {activeTab === 'details' ? (
-          <div>
-            <div className='flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between'>
-              <div>
-                <p className='text-xs font-semibold uppercase tracking-[0.24em] text-[#a6806f]'>
-                  Personal details
-                </p>
-                <h2 className='mt-2 text-2xl font-bold text-[#34160f]'>Manage your shopper profile</h2>
-              </div>
+      {/* ── Details Tab ── */}
+      {activeTab === 'details' && (
+        <section className='overflow-hidden rounded-[28px] border border-[#efdcd2] bg-white shadow-[0_18px_45px_rgba(94,35,23,0.07)]'>
+          <div className='flex items-center justify-between border-b border-[#f5e8e2] bg-gradient-to-r from-[#fffaf6] to-white px-6 py-5'>
+            <div>
+              <p className='text-[11px] font-bold uppercase tracking-[0.24em] text-[#a6806f]'>Personal details</p>
+              <h3 className='mt-0.5 text-lg font-bold text-[#34160f]'>Your account information</h3>
+            </div>
+            {!isEditing ? (
               <button
                 type='button'
-                onClick={() => (isEditing ? handleSave() : setIsEditing(true))}
-                className='inline-flex items-center gap-2 rounded-full border border-[#ead9cf] bg-[#fffaf6] px-4 py-2.5 text-sm font-semibold text-[#7a1e2c]'
+                onClick={() => setIsEditing(true)}
+                className='inline-flex items-center gap-2 rounded-2xl border border-[#ead9cf] bg-[#fffaf6] px-4 py-2.5 text-sm font-semibold text-[#7a1e2c] transition hover:bg-[#f9ede7]'
               >
-                <Edit3 size={14} />
-                {isEditing ? 'Save profile' : 'Edit profile'}
+                <Edit3 size={14} /> Edit
               </button>
-            </div>
-
-            <div className='mt-6 grid gap-5 md:grid-cols-2'>
-              {[
-                { key: 'name', label: 'Full name' },
-                { key: 'email', label: 'Email address' },
-                { key: 'phone', label: 'Phone number' },
-                { key: 'city', label: 'City' },
-              ].map((item) => (
-                <div key={item.key}>
-                  <label className='mb-2 block text-sm font-semibold text-[#34160f]'>
-                    {item.label}
-                  </label>
-                  {isEditing ? (
-                    <input
-                      value={form[item.key]}
-                      onChange={(event) => updateField(item.key, event.target.value)}
-                      className={inputClassName}
-                    />
-                  ) : (
-                    <div className='rounded-[18px] bg-[#fffaf6] px-4 py-3 text-sm font-semibold text-[#34160f]'>
-                      {form[item.key]}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        ) : null}
-
-        {activeTab === 'addresses' ? (
-          <div>
-            <div className='flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between'>
-              <div>
-                <p className='text-xs font-semibold uppercase tracking-[0.24em] text-[#a6806f]'>
-                  Saved addresses
-                </p>
-                <h2 className='mt-2 text-2xl font-bold text-[#34160f]'>Choose where you want delivery</h2>
+            ) : (
+              <div className='flex gap-2'>
+                <button
+                  type='button'
+                  onClick={() => setIsEditing(false)}
+                  className='inline-flex items-center gap-1.5 rounded-2xl border border-[#ead9cf] bg-white px-4 py-2.5 text-sm font-semibold text-[#8b6759] transition hover:bg-[#f9f0ec]'
+                >
+                  <X size={14} /> Cancel
+                </button>
+                <button
+                  type='button'
+                  onClick={handleSave}
+                  disabled={saving}
+                  className='inline-flex items-center gap-1.5 rounded-2xl bg-[#7a1e2c] px-4 py-2.5 text-sm font-semibold text-white shadow-md transition hover:bg-[#651623] disabled:opacity-60'
+                >
+                  <Save size={14} /> {saving ? 'Saving...' : 'Save'}
+                </button>
               </div>
-              <button
-                type='button'
-                className='inline-flex items-center gap-2 rounded-full bg-[#7a1e2c] px-4 py-2.5 text-sm font-semibold text-white'
-              >
-                <Plus size={14} />
-                Add address
-              </button>
-            </div>
-
-            <div className='mt-6 grid gap-4'>
-              {ADDRESSES.map((address) => (
-                <div key={address.id} className='rounded-[24px] bg-[#fffaf6] p-5'>
-                  <div className='flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between'>
-                    <div>
-                      <div className='flex flex-wrap gap-2'>
-                        <span className='rounded-full bg-[#7a1e2c] px-3 py-1 text-xs font-semibold text-white'>
-                          {address.label}
-                        </span>
-                        {address.default ? (
-                          <span className='rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700'>
-                            Default
-                          </span>
-                        ) : null}
-                      </div>
-                      <p className='mt-4 text-sm font-semibold text-[#34160f]'>{address.address}</p>
-                      <p className='mt-2 text-sm text-[#8b6759]'>{address.phone}</p>
-                    </div>
-
-                    <button
-                      type='button'
-                      className='inline-flex items-center gap-2 rounded-full border border-[#f1d5cf] bg-white px-4 py-2 text-sm font-semibold text-[#c44634]'
-                    >
-                      <Trash2 size={14} />
-                      Remove
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
+            )}
           </div>
-        ) : null}
 
-        {activeTab === 'wishlist' ? (
-          <div>
-            <p className='text-xs font-semibold uppercase tracking-[0.24em] text-[#a6806f]'>
-              Wishlist
-            </p>
-            <h2 className='mt-2 text-2xl font-bold text-[#34160f]'>Saved favourites</h2>
-
-            {wishlist.length ? (
-              <div className='mt-6 grid gap-4'>
-                {wishlist.map((item) => (
-                  <div key={item.id} className='rounded-[24px] bg-[#fffaf6] p-5'>
-                    <div className='flex flex-col gap-4 sm:flex-row sm:items-center'>
-                      <div className='flex h-20 w-full items-center justify-center rounded-[22px] bg-gradient-to-br from-[#fff8f1] via-[#fdecd9] to-[#f7d9c6] text-3xl sm:w-20'>
-                        S
-                      </div>
-                      <div className='flex-1'>
-                        <p className='text-lg font-bold text-[#34160f]'>{item.name}</p>
-                        <p className='mt-1 text-sm text-[#8b6759]'>{item.seller}</p>
-                        <div className='mt-3 flex flex-wrap items-center gap-3'>
-                          <span className='text-base font-bold text-[#7a1e2c]'>{item.price}</span>
-                          <span className='inline-flex items-center gap-1 rounded-full bg-[#fff6db] px-3 py-1 text-xs font-semibold text-[#9b6a08]'>
-                            <Star size={12} fill='currentColor' />
-                            {item.rating}
-                          </span>
-                        </div>
-                      </div>
-                      <button
-                        type='button'
-                        onClick={() => setWishlist((prev) => prev.filter((entry) => entry.id !== item.id))}
-                        className='inline-flex items-center justify-center gap-2 rounded-full border border-[#f1d5cf] bg-white px-4 py-2 text-sm font-semibold text-[#c44634]'
-                      >
-                        <Trash2 size={14} />
-                        Remove
-                      </button>
+          <div className='p-6'>
+            {isEditing ? (
+              <div className='grid gap-5 sm:grid-cols-2'>
+                {[
+                  { key: 'firstName', label: 'First Name',   placeholder: 'Enter first name',  icon: User  },
+                  { key: 'lastName',  label: 'Last Name',    placeholder: 'Enter last name',   icon: User  },
+                  { key: 'email',     label: 'Email Address', placeholder: 'Enter your email',  icon: Mail  },
+                  { key: 'phone',     label: 'Phone Number', placeholder: 'Enter phone number', icon: Phone },
+                ].map(({ key, label, placeholder, icon: Icon }) => (
+                  <div key={key}>
+                    <label className='mb-2 block text-xs font-bold uppercase tracking-[0.18em] text-[#a6806f]'>{label}</label>
+                    <div className='relative'>
+                      <span className='pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[#c4a99e]'>
+                        <Icon size={15} />
+                      </span>
+                      <input
+                        value={form[key]}
+                        onChange={(e) => setForm((prev) => ({ ...prev, [key]: e.target.value }))}
+                        placeholder={placeholder}
+                        className={`${inputCls} pl-10`}
+                      />
                     </div>
                   </div>
                 ))}
               </div>
             ) : (
-              <p className='mt-6 text-sm text-[#8b6759]'>Your wishlist is empty.</p>
+              <div className='grid gap-4 sm:grid-cols-2'>
+                {[
+                  { label: 'Full Name',     value: fullName,   icon: User  },
+                  { label: 'Email Address', value: form.email, icon: Mail  },
+                  { label: 'Phone Number',  value: form.phone, icon: Phone },
+                ].map(({ label, value, icon: Icon }) => (
+                  <div key={label} className='flex items-center gap-4 rounded-2xl border border-[#f0e0d6] bg-[#fffaf6] px-5 py-4 transition hover:border-[#e0c8be]'>
+                    <div className='flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#fdeee8] to-[#f9ddd4] text-[#7a1e2c] shadow-sm'>
+                      <Icon size={17} />
+                    </div>
+                    <div className='min-w-0'>
+                      <p className='text-[10px] font-bold uppercase tracking-[0.22em] text-[#a6806f]'>{label}</p>
+                      <p className='mt-0.5 truncate text-sm font-semibold text-[#34160f]'>{value || '—'}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
-        ) : null}
+        </section>
+      )}
 
-        {activeTab === 'history' ? (
-          <div>
-            <p className='text-xs font-semibold uppercase tracking-[0.24em] text-[#a6806f]'>
-              Order history
-            </p>
-            <h2 className='mt-2 text-2xl font-bold text-[#34160f]'>Recent purchases</h2>
+      {/* ── Addresses Tab ── */}
+      {activeTab === 'addresses' && (
+        <section className='overflow-hidden rounded-[28px] border border-[#efdcd2] bg-white shadow-[0_18px_45px_rgba(94,35,23,0.07)]'>
+          <div className='flex items-center justify-between border-b border-[#f5e8e2] bg-gradient-to-r from-[#fffaf6] to-white px-6 py-5'>
+            <div>
+              <p className='text-[11px] font-bold uppercase tracking-[0.24em] text-[#a6806f]'>Saved addresses</p>
+              <h3 className='mt-0.5 text-lg font-bold text-[#34160f]'>Manage delivery locations</h3>
+            </div>
+            <button
+              type='button'
+              onClick={() => setShowAddModal(true)}
+              className='inline-flex items-center gap-2 rounded-2xl bg-[#7a1e2c] px-4 py-2.5 text-sm font-semibold text-white shadow-md transition hover:bg-[#651623]'
+            >
+              <Plus size={14} /> Add New
+            </button>
+          </div>
 
-            <div className='mt-6 grid gap-4'>
-              {ORDER_HISTORY.map((order) => (
-                <div key={order.id} className='rounded-[24px] bg-[#fffaf6] p-5'>
-                  <div className='flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between'>
-                    <div>
-                      <p className='text-lg font-bold text-[#34160f]'>{order.product}</p>
-                      <p className='mt-1 text-sm text-[#8b6759]'>
-                        {order.id} • {order.date}
-                      </p>
+          <div className='space-y-4 p-6'>
+            {addresses.length === 0 ? (
+              <div className='flex flex-col items-center justify-center py-12 text-center'>
+                <div className='flex h-16 w-16 items-center justify-center rounded-full bg-[#f9ede7] text-[#7a1e2c]'>
+                  <MapPin size={28} />
+                </div>
+                <p className='mt-4 text-sm font-semibold text-[#8b6759]'>No address found</p>
+                <p className='mt-1 text-xs text-[#a6806f]'>Add a new delivery address to get started</p>
+              </div>
+            ) : (
+              addresses.map(({ id, label, icon: AddrIcon, address, phone, default: isDefault }) => (
+                <div key={id} className='group relative overflow-hidden rounded-[22px] border border-[#f0e0d6] bg-[#fffaf6] p-5 transition hover:border-[#d4a898] hover:shadow-md'>
+                  <div className='absolute left-0 top-0 h-full w-1 rounded-l-[22px] bg-gradient-to-b from-[#7a1e2c] to-[#c9a227]' />
+                  <div className='flex flex-col gap-4 pl-3 sm:flex-row sm:items-center sm:justify-between'>
+                    <div className='flex items-start gap-4'>
+                      <div className='flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#fdeee8] to-[#f9ddd4] text-[#7a1e2c] shadow-sm'>
+                        <AddrIcon size={20} />
+                      </div>
+                      <div>
+                        <div className='flex flex-wrap items-center gap-2'>
+                          <span className='text-base font-bold text-[#34160f]'>{label}</span>
+                          {isDefault && (
+                            <span className='rounded-full bg-emerald-100 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-700'>
+                              Default
+                            </span>
+                          )}
+                        </div>
+                        <p className='mt-1.5 text-sm text-[#5d4038]'>{address}</p>
+                        <p className='mt-1 inline-flex items-center gap-1.5 text-xs text-[#a6806f]'>
+                          <Phone size={11} /> {phone}
+                        </p>
+                      </div>
                     </div>
-                    <div className='flex flex-col gap-2 sm:items-end'>
-                      <span className='text-base font-bold text-[#7a1e2c]'>{order.price}</span>
-                      <span className={`rounded-full px-3 py-1 text-xs font-semibold ${STATUS_STYLES[order.status]}`}>
-                        {order.status}
-                      </span>
+                    <div className='flex shrink-0 gap-2 pl-16 sm:pl-0'>
+                      <button
+                        type='button'
+                        className='inline-flex items-center gap-1.5 rounded-xl border border-[#ead9cf] bg-white px-3 py-2 text-xs font-semibold text-[#7a1e2c] transition hover:bg-[#f9ede7]'
+                      >
+                        <Edit3 size={12} /> Edit
+                      </button>
+                      <button
+                        type='button'
+                        className='inline-flex items-center gap-1.5 rounded-xl border border-[#f1d5cf] bg-white px-3 py-2 text-xs font-semibold text-[#c44634] transition hover:bg-red-50'
+                      >
+                        <Trash2 size={12} /> Remove
+                      </button>
                     </div>
                   </div>
                 </div>
-              ))}
-            </div>
+              ))
+            )}
           </div>
-        ) : null}
-      </section>
+        </section>
+      )}
+
+      {/* ── Add Address Modal ── */}
+      {showAddModal && (
+        <div className='fixed inset-0 z-50 flex items-center justify-center p-4' style={{ backdropFilter: 'blur(6px)', background: 'rgba(47,29,24,0.45)' }}>
+          <div className='w-full max-w-lg overflow-hidden rounded-[28px] bg-white shadow-2xl'>
+
+            {/* Modal header */}
+            <div className='flex items-center justify-between border-b border-[#f5e8e2] bg-gradient-to-r from-[#fffaf6] to-white px-6 py-5'>
+              <div>
+                <p className='text-[11px] font-bold uppercase tracking-[0.24em] text-[#a6806f]'>New Address</p>
+                <h3 className='mt-0.5 text-lg font-bold text-[#34160f]'>Add delivery address</h3>
+              </div>
+              <button
+                type='button'
+                onClick={() => { setShowAddModal(false); setAddrForm(emptyAddrForm); }}
+                className='flex h-9 w-9 items-center justify-center rounded-full text-[#a67d65] hover:bg-[#f9ede7] hover:text-[#7a1e2c] transition'
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Modal form */}
+            <form onSubmit={handleAddAddress} className='space-y-4 p-6'>
+              <div className='grid gap-4 sm:grid-cols-2'>
+                {[
+                  { key: 'addressLine1', label: 'Address Line 1', placeholder: 'Street / Building', required: true  },
+                  { key: 'addressLine2', label: 'Address Line 2', placeholder: 'Apt / Block (optional)', required: false },
+                  { key: 'city',         label: 'City',           placeholder: 'Enter city',          required: true  },
+                  { key: 'state',        label: 'State',          placeholder: 'Enter state',         required: true  },
+                  { key: 'postalCode',   label: 'Postal Code',    placeholder: 'Enter postal code',   required: true  },
+                  { key: 'country',      label: 'Country',        placeholder: 'Enter country',       required: true  },
+                  { key: 'addressType',  label: 'Address Type',   placeholder: 'Home / Work / Other', required: true  },
+                ].map(({ key, label, placeholder, required }) => (
+                  <div key={key}>
+                    <label className='mb-1.5 block text-xs font-bold uppercase tracking-[0.18em] text-[#a6806f]'>
+                      {label}{required && <span className='ml-0.5 text-red-400'>*</span>}
+                    </label>
+                    <input
+                      value={addrForm[key]}
+                      onChange={(e) => setAddrForm((prev) => ({ ...prev, [key]: e.target.value }))}
+                      placeholder={placeholder}
+                      required={required}
+                      className={inputCls}
+                    />
+                  </div>
+                ))}
+              </div>
+
+              {/* Default toggle */}
+              <label className='flex cursor-pointer items-center gap-3 rounded-2xl border border-[#f0e0d6] bg-[#fffaf6] px-4 py-3'>
+                <input
+                  type='checkbox'
+                  checked={addrForm.isDefault}
+                  onChange={(e) => setAddrForm((prev) => ({ ...prev, isDefault: e.target.checked }))}
+                  className='h-4 w-4 rounded accent-[#7a1e2c]'
+                />
+                <span className='text-sm font-semibold text-[#34160f]'>Set as default address</span>
+              </label>
+
+              {/* Actions */}
+              <div className='flex gap-3 pt-1'>
+                <button
+                  type='button'
+                  onClick={() => { setShowAddModal(false); setAddrForm(emptyAddrForm); }}
+                  className='flex-1 rounded-2xl border border-[#ead9cf] bg-white py-3 text-sm font-semibold text-[#8b6759] transition hover:bg-[#f9f0ec]'
+                >
+                  Cancel
+                </button>
+                <button
+                  type='submit'
+                  disabled={addSaving}
+                  className='flex-1 rounded-2xl bg-[#7a1e2c] py-3 text-sm font-semibold text-white shadow-md transition hover:bg-[#651623] disabled:opacity-60'
+                >
+                  {addSaving ? 'Saving...' : 'Save Address'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };

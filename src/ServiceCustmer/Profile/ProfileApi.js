@@ -9,8 +9,8 @@ import { Base_Url } from '../../BaseURL/BaseUrl';
 export const getCustomerProfile = () =>
   getApiWithAuthorization(`${Base_Url}api/customer/profile`);
 
-export const updateCustomerProfile = (data) =>
-  putApiWithAuthorization(`${Base_Url}api/customer/profile/update`, data);
+export const updateCustomerProfile = (userId, data) =>
+  putApiWithAuthorization(`${Base_Url}api/customer/${userId}/update-customer-profile`, data);
 
 export const getWishlist = () =>
   getApiWithAuthorization(`${Base_Url}api/customer/profile/wishlist`);
@@ -22,4 +22,4 @@ export const getSavedAddresses = () =>
   getApiWithAuthorization(`${Base_Url}api/customer/profile/addresses`);
 
 export const addAddress = (data) =>
-  postApiWithAuthorization(`${Base_Url}api/customer/profile/addresses`, data);
+  postApiWithAuthorization(`${Base_Url}api/customer/add-customer-aaddress`, data);
