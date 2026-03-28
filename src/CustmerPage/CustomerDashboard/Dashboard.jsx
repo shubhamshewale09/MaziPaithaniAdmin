@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   ArrowRight,
   Clock3,
@@ -13,6 +13,7 @@ import {
   Truck,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { disconnectChatHub, useChatConnection } from '../../hooks/useChatConnection';
 
 import MetaTitle from '../../components/custom/MetaTitle';
 import CustomerLayout from '../../components/custom/customer/CustomerLayout';
@@ -481,13 +482,29 @@ const HomeTab = ({
 const CustomerDashboard = () => {
   const { logout } = useAuth();
   const navigate = useNavigate();
+  const connection = useChatConnection();
   const [activeTab, setActiveTab] = useState('home');
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSeller, setSelectedSeller] = useState('');
   const [cartCount, setCartCount] = useState(2);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  // Listen to NewMessageNotification for unread badge
+  useEffect(() => {
+    if (!connection) return;
+    const handler = () => setUnreadCount((prev) => prev + 1);
+    connection.on('NewMessageNotification', handler);
+    return () => connection.off('NewMessageNotification', handler);
+  }, [connection]);
+
+  // Reset unread count when user opens messages tab
+  useEffect(() => {
+    if (activeTab === 'messages') setUnreadCount(0);
+  }, [activeTab]);
 
   const handleLogout = () => {
+    disconnectChatHub();
     logout();
     localStorage.removeItem('login');
     localStorage.removeItem('token');
@@ -510,6 +527,7 @@ const CustomerDashboard = () => {
   const handleMessageArtisan = (seller) => {
     setSelectedSeller(seller);
     setActiveTab('messages');
+    setUnreadCount(0);
   };
 
   const customerTitle = useMemo(() => {
@@ -602,6 +620,7 @@ const CustomerDashboard = () => {
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         cartCount={cartCount}
+        unreadCount={unreadCount}
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
       >
