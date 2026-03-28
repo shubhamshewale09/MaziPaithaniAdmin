@@ -31,6 +31,7 @@ const CustomerLayout = ({
   activeTab,
   setActiveTab,
   cartCount = 0,
+  unreadCount = 0,
   searchTerm = '',
   onSearchChange,
 }) => {
@@ -153,6 +154,7 @@ const CustomerLayout = ({
               {NAV_LINKS.map((item) => {
                 const Icon = item.icon;
                 const isActive = activeTab === item.id;
+                const showBadge = item.id === 'messages' && unreadCount > 0;
 
                 return (
                   <button
@@ -160,7 +162,7 @@ const CustomerLayout = ({
                     type='button'
                     onClick={() => handleTabChange(item.id)}
                     className={[
-                      'flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition',
+                      'relative flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition',
                       isActive
                         ? 'bg-[#7a1e2c] text-white shadow-md shadow-[#7a1e2c]/20'
                         : 'text-[#6b5048] hover:bg-[#fff1e7] hover:text-[#7a1e2c]',
@@ -168,6 +170,11 @@ const CustomerLayout = ({
                   >
                     <Icon size={15} />
                     {item.label}
+                    {showBadge && (
+                      <span className='flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[#c28b1e] px-1 text-[10px] font-bold text-white'>
+                        {unreadCount}
+                      </span>
+                    )}
                   </button>
                 );
               })}
@@ -234,7 +241,7 @@ const CustomerLayout = ({
         )}
       </header>
 
-      <main className='px-4 pb-28 pt-6 sm:px-6 lg:px-8 lg:pb-10'>
+      <main className='px-4 pt-5 pb-24 sm:px-6 lg:px-8 lg:pb-8'>
         <div className='mx-auto max-w-7xl'>{children}</div>
       </main>
 
@@ -243,6 +250,7 @@ const CustomerLayout = ({
           {NAV_LINKS.map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
+            const showBadge = item.id === 'messages' && unreadCount > 0;
 
             return (
               <button
@@ -253,13 +261,18 @@ const CustomerLayout = ({
               >
                 <span
                   className={[
-                    'flex h-9 w-9 items-center justify-center rounded-2xl transition',
+                    'relative flex h-9 w-9 items-center justify-center rounded-2xl transition',
                     isActive
                       ? 'bg-[#7a1e2c] text-white shadow-md shadow-[#7a1e2c]/20'
                       : 'bg-transparent text-[#9b7b69]',
                   ].join(' ')}
                 >
                   <Icon size={17} />
+                  {showBadge && (
+                    <span className='absolute -right-1 -top-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-[#c28b1e] px-0.5 text-[9px] font-bold text-white'>
+                      {unreadCount}
+                    </span>
+                  )}
                 </span>
                 <span
                   className={[

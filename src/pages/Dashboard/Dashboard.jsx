@@ -137,6 +137,13 @@ const Dashboard = () => {
     },
   ];
 
+  const [enquiryInitConv, setEnquiryInitConv] = useState(null);
+
+  const handleOpenEnquiry = (conv) => {
+    setEnquiryInitConv(conv ?? null);
+    setActiveTab('enquiries');
+  };
+
   const confirmLogout = () => {
     logout();
     localStorage.removeItem('login');
@@ -274,7 +281,7 @@ const Dashboard = () => {
       case 'orders':
         return <Orders />;
       case 'enquiries':
-        return <Enquiries />;
+        return <Enquiries initConv={enquiryInitConv} onInitConvConsumed={() => setEnquiryInitConv(null)} />;
       case 'revenue':
         return <Revenue />;
       case 'settings':
@@ -295,6 +302,7 @@ const Dashboard = () => {
           showMenuButton={!shouldForceProfileCompletion}
           showLogoutButton={false}
           onLogout={() => setIsLogoutModalOpen(true)}
+          onOpenEnquiry={handleOpenEnquiry}
         />
 
         <Sidebar
@@ -310,7 +318,8 @@ const Dashboard = () => {
 
         <main
           className={[
-            'relative min-h-screen overflow-x-hidden px-4 pb-8 pt-[94px] transition-all duration-300 ease-out sm:px-6 lg:px-8',
+            'relative overflow-x-hidden px-4 pt-[94px] transition-all duration-300 ease-out sm:px-6 lg:px-8',
+            activeTab === 'enquiries' ? 'h-screen overflow-hidden pb-0' : 'min-h-screen pb-8',
             isMobile
               ? 'ml-0'
               : isSidebarCollapsed

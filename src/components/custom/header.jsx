@@ -1,5 +1,6 @@
 import React from "react";
-import { Bell, LogOut, Mail, Menu, User } from "lucide-react";
+import { Bell, LogOut, Menu, User } from "lucide-react";
+import MessageNotificationBell from './MessageNotificationBell';
 
 const Header = ({
   onMenuClick,
@@ -7,6 +8,7 @@ const Header = ({
   showMenuButton = true,
   showLogoutButton = false,
   onLogout,
+  onOpenEnquiry,
 }) => {
   const currentTabLabel = activeTab
     ? activeTab.charAt(0).toUpperCase() + activeTab.slice(1)
@@ -68,10 +70,7 @@ const Header = ({
                 <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-[#d97706] sm:right-3 sm:top-3 sm:h-2.5 sm:w-2.5" />
               </button>
 
-              <button className="relative flex h-9 w-9 items-center justify-center rounded-xl border border-[#eee2db] bg-white text-[#6a1825] transition hover:-translate-y-0.5 hover:bg-[#fff8f3] sm:h-11 sm:w-11 sm:rounded-2xl">
-                <Mail size={16} className="sm:h-[18px] sm:w-[18px]" />
-                <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-[#be123c] sm:right-3 sm:top-3 sm:h-2.5 sm:w-2.5" />
-              </button>
+              {onOpenEnquiry && <MessageNotificationBell onOpenEnquiry={onOpenEnquiry} />}
 
               <div className="flex items-center gap-2 rounded-xl border border-[#eee2db] bg-white px-2 py-2 shadow-sm sm:gap-3 sm:rounded-2xl sm:px-4">
                 <div className="hidden text-right sm:block">
