@@ -9,9 +9,7 @@ import {
   ShoppingCart,
   SlidersHorizontal,
   Sparkles,
-  Star,
   Store,
-  Tag,
   X,
   Zap,
 } from 'lucide-react';
@@ -23,13 +21,17 @@ import Categories from '../Categories/Categories';
 import ProductDetail from '../ProductDetail/ProductDetail';
 import CustomDesign from '../CustomDesign/CustomDesign';
 import Cart from '../Cart/Cart';
+import Wishlist from '../Wishlist/Wishlist';
 import Checkout from '../Checkout/Checkout';
 import Orders from '../Orders/Orders';
 import Messages from '../Messages/Messages';
 import Profile from '../Profile/Profile';
 import { useAuth } from '../../context/auth/AuthContext';
-import { showApiSuccess } from '../../Utils/Utils';
+import { showApiSuccess, showApiError } from '../../Utils/Utils';
+import ConfirmationModal from '../../components/custom/ConfirmationModal';
 import { GetAllProductData } from '../../services/Product/ProductApi';
+import { addToWishlist, getWishlist, removeFromWishlist } from '../../ServiceCustmer/Wishlist/WishlistApi';
+import { Base_Url } from '../../BaseURL/BaseUrl';
 
 const getUserId = () => {
   try {
@@ -40,7 +42,11 @@ const getUserId = () => {
   }
 };
 
-const fixUrl = (url) => (typeof url === 'string' ? url : '');
+const fixUrl = (url) => {
+  if (typeof url !== 'string' || !url) return '';
+  if (url.startsWith('http')) return url;
+  return `${Base_Url}${url.startsWith('/') ? url.slice(1) : url}`;
+};
 
 const normalizeProducts = (response) => {
   const raw = Array.isArray(response?.products)
@@ -72,10 +78,30 @@ const normalizeProducts = (response) => {
     }));
 };
 
+const normalizeWishlist = (response) =>
+  (Array.isArray(response?.items) ? response.items : [])
+    .filter((p) => p?.bIsDeleted !== true && p?.bIsActive !== false)
+    .map((p) => ({
+      id: p.iProductId,
+      wishlistId: p.wishlistId,
+      name: p.sProductTitle ?? 'Untitled',
+      seller: p.sellerName ?? '',
+      sellerUserId: p.sellerUserId ?? null,
+      price: Number(p.dcBasePrice ?? 0),
+      color: p.sColor ?? '',
+      fabric: p.sFabric ?? '',
+      design: p.sDesignType ?? '',
+      stock: 1,
+      isCustomizationAvailable: p.bIsCustomizationAvailable ?? false,
+      description: p.sDescription ?? '',
+      images: Array.isArray(p.images)
+        ? p.images.map((img) => fixUrl(img.sImageUrl ?? '')).filter(Boolean)
+        : [],
+    }));
+
 // ── Product card ──────────────────────────────────────────────────────────────
-const ProductCard = ({ item, onOpen, onAddToCart, onChatSeller }) => {
+const ProductCard = ({ item, onOpen, onAddToCart, onChatSeller, onToggleWishlist, isWished = false }) => {
   const [activeImg, setActiveImg] = useState(0);
-  const [wished, setWished] = useState(false);
   const [added, setAdded] = useState(false);
   const hasImages = item.images.length > 0;
   const total = item.images.length;
@@ -88,6 +114,11 @@ const ProductCard = ({ item, onOpen, onAddToCart, onChatSeller }) => {
     setTimeout(() => setAdded(false), 1500);
   };
 
+  const handleWishlist = (e) => {
+    e.stopPropagation();
+    onToggleWishlist?.(item);
+  };
+
   const handleChat = (e) => {
     e.stopPropagation();
     onChatSeller({ sellerId: item.sellerUserId, sellerName: item.seller });
@@ -97,7 +128,7 @@ const ProductCard = ({ item, onOpen, onAddToCart, onChatSeller }) => {
     <div className='group flex flex-col bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5'>
 
       {/* Image block */}
-      <div className='relative overflow-hidden bg-[#faf7f5]' style={{ aspectRatio: '4/5' }}>
+      <div className='relative overflow-hidden bg-[#faf7f5]' style={{ aspectRatio: '1/1' }}>
         {hasImages ? (
           <img
             src={item.images[activeImg]}
@@ -119,24 +150,24 @@ const ProductCard = ({ item, onOpen, onAddToCart, onChatSeller }) => {
         )}
 
         {!isOutOfStock && item.stock <= 5 && (
-          <span className='absolute top-2.5 left-2.5 bg-orange-500 text-white text-[10px] font-bold px-2.5 py-1 rounded-full shadow'>
+          <span className='absolute top-2 left-2 bg-orange-500 text-white text-[9px] font-bold px-2 py-0.5 rounded-full shadow'>
             Only {item.stock} left
           </span>
         )}
         {!isOutOfStock && item.stock > 5 && (
-          <span className='absolute top-2.5 left-2.5 bg-emerald-600 text-white text-[10px] font-bold px-2.5 py-1 rounded-full shadow'>
-            In Stock · {item.stock}
+          <span className='absolute top-2 left-2 bg-emerald-600 text-white text-[9px] font-bold px-2 py-0.5 rounded-full shadow'>
+            In Stock
           </span>
         )}
 
         <button
           type='button'
-          onClick={(e) => { e.stopPropagation(); setWished((w) => !w); }}
-          className={`absolute top-2.5 right-2.5 h-9 w-9 flex items-center justify-center rounded-full shadow transition-all duration-200 ${
-            wished ? 'bg-[#7a1e2c] text-white scale-110' : 'bg-white/90 text-[#7a1e2c] hover:bg-white'
+          onClick={handleWishlist}
+          className={`absolute top-2 right-2 h-7 w-7 flex items-center justify-center rounded-full shadow transition-all duration-200 ${
+            isWished ? 'bg-[#7a1e2c] text-white scale-110' : 'bg-white/90 text-[#7a1e2c] hover:bg-white'
           }`}
         >
-          <Heart size={15} fill={wished ? 'currentColor' : 'none'} />
+          <Heart size={12} fill={isWished ? 'currentColor' : 'none'} />
         </button>
 
         {total > 1 && (
@@ -165,84 +196,75 @@ const ProductCard = ({ item, onOpen, onAddToCart, onChatSeller }) => {
       </div>
 
       {/* Info block */}
-      <div className='flex flex-col flex-1 p-3.5'>
+      <div className='flex flex-col flex-1 p-2.5'>
         <div className='flex items-center gap-1 mb-1'>
-          <Store size={11} className='text-[#a6806f]' />
-          <p className='text-[11px] text-[#a6806f] font-medium truncate'>{item.seller || 'Paithani Artisan'}</p>
+          <Store size={10} className='text-[#a6806f] shrink-0' />
+          <p className='text-[10px] text-[#a6806f] font-medium truncate'>{item.seller || 'Paithani Artisan'}</p>
         </div>
 
-        <p className='text-sm font-bold text-[#1a0a07] leading-snug line-clamp-2 cursor-pointer hover:text-[#7a1e2c] transition-colors' onClick={() => onOpen(item)}>
+        <p className='text-xs font-bold text-[#1a0a07] leading-snug line-clamp-2 cursor-pointer hover:text-[#7a1e2c] transition-colors mb-1' onClick={() => onOpen(item)} title={item.name}>
           {item.name}
         </p>
 
-        <div className='flex flex-wrap gap-1 mt-1.5'>
+        <p className='text-sm font-extrabold text-[#7a1e2c] mb-1.5'>₹{item.price.toLocaleString('en-IN')}</p>
+
+        <div className='flex flex-wrap gap-1 mb-2'>
           {item.color && (
-            <span className='inline-flex items-center gap-0.5 text-[10px] bg-[#fff1e7] text-[#7a1e2c] px-2 py-0.5 rounded-full font-medium'>
-              <Tag size={9} /> {item.color}
-            </span>
+            <span className='text-[9px] bg-[#fff1e7] text-[#7a1e2c] px-1.5 py-0.5 rounded-full font-medium'>{item.color}</span>
           )}
           {item.fabric && (
-            <span className='text-[10px] bg-[#f0f9f4] text-emerald-700 px-2 py-0.5 rounded-full font-medium'>{item.fabric}</span>
+            <span className='text-[9px] bg-[#f0f9f4] text-emerald-700 px-1.5 py-0.5 rounded-full font-medium'>{item.fabric}</span>
           )}
           {item.isCustomizationAvailable && (
-            <span className='inline-flex items-center gap-0.5 text-[10px] bg-[#fff8e1] text-amber-700 px-2 py-0.5 rounded-full font-medium'>
-              <Sparkles size={9} /> Custom
+            <span className='inline-flex items-center gap-0.5 text-[9px] bg-[#fff8e1] text-amber-700 px-1.5 py-0.5 rounded-full font-medium'>
+              <Sparkles size={8} /> Custom
             </span>
           )}
         </div>
 
-        <div className='flex items-center justify-between mt-2'>
-          <div>
-            <p className='text-base font-extrabold text-[#7a1e2c]'>₹{item.price.toLocaleString('en-IN')}</p>
-            <span className='flex items-center gap-0.5 text-[10px] font-semibold text-amber-600'>
-              <Star size={9} fill='currentColor' /> 4.8
-            </span>
-          </div>
-          <div className='flex items-center gap-1'>
+        {/* Single action row: icon buttons + Add to Cart */}
+        <div className='mt-auto flex items-center gap-1'>
+          <button
+            type='button'
+            onClick={() => onOpen(item)}
+            title='View'
+            className='flex items-center justify-center h-7 w-7 shrink-0 rounded-lg border border-[#e8d5cc] text-[#7a1e2c] hover:bg-[#fff1e7] transition-colors'
+          >
+            <Zap size={11} />
+          </button>
+          {item.sellerUserId && (
             <button
               type='button'
-              onClick={() => onOpen(item)}
-              title='View details'
-              className='flex items-center justify-center h-8 w-8 rounded-xl border border-[#e8d5cc] text-[#7a1e2c] hover:bg-[#fff1e7] transition-colors'
+              onClick={handleChat}
+              title='Chat'
+              className='flex items-center justify-center h-7 w-7 shrink-0 rounded-lg border border-[#e8d5cc] text-[#7a1e2c] hover:bg-[#fff1e7] transition-colors'
             >
-              <Zap size={13} />
+              <MessageCircle size={11} />
             </button>
-            {item.sellerUserId && (
-              <button
-                type='button'
-                onClick={handleChat}
-                title={`Chat with ${item.seller || 'seller'}`}
-                className='flex items-center justify-center h-8 w-8 rounded-xl border border-[#e8d5cc] text-[#7a1e2c] hover:bg-[#fff1e7] transition-colors'
-              >
-                <MessageCircle size={13} />
-              </button>
-            )}
-          </div>
+          )}
+          <button
+            type='button'
+            onClick={handleAddToCart}
+            disabled={isOutOfStock}
+            className={`flex-1 min-w-0 flex items-center justify-center gap-1 py-1.5 rounded-lg text-[10px] font-bold transition-all duration-200 ${
+              isOutOfStock
+                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                : added
+                ? 'bg-emerald-600 text-white'
+                : 'bg-[#7a1e2c] text-white hover:bg-[#651623] active:scale-95'
+            }`}
+          >
+            <ShoppingCart size={11} className='shrink-0' />
+            <span className='truncate'>{added ? 'Added!' : isOutOfStock ? 'N/A' : 'Add to Cart'}</span>
+          </button>
         </div>
-
-        {/* Add to Cart — full width, always visible */}
-        <button
-          type='button'
-          onClick={handleAddToCart}
-          disabled={isOutOfStock}
-          className={`mt-2.5 w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 ${
-            isOutOfStock
-              ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-              : added
-              ? 'bg-emerald-600 text-white scale-95'
-              : 'bg-[#7a1e2c] text-white hover:bg-[#651623] active:scale-95'
-          }`}
-        >
-          <ShoppingCart size={13} />
-          {added ? 'Added!' : isOutOfStock ? 'Unavailable' : 'Add to Cart'}
-        </button>
       </div>
     </div>
   );
 };
 
 // ── Horizontal scroll section ─────────────────────────────────────────────────
-const ScrollSection = ({ title, subtitle, products, onOpen, onAddToCart, onChatSeller, onViewAll }) => {
+const ScrollSection = ({ title, subtitle, products, onOpen, onAddToCart, onChatSeller, onToggleWishlist, wishlistIds, onViewAll }) => {
   const ref = useRef(null);
   const scroll = (dir) => ref.current?.scrollBy({ left: dir * 320, behavior: 'smooth' });
   if (!products.length) return null;
@@ -271,7 +293,7 @@ const ScrollSection = ({ title, subtitle, products, onOpen, onAddToCart, onChatS
       <div ref={ref} className='flex gap-4 overflow-x-auto pb-1' style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
         {products.map((item) => (
           <div key={item.id} className='w-[220px] shrink-0'>
-            <ProductCard item={item} onOpen={onOpen} onAddToCart={onAddToCart} onChatSeller={onChatSeller} />
+            <ProductCard item={item} onOpen={onOpen} onAddToCart={onAddToCart} onChatSeller={onChatSeller} onToggleWishlist={onToggleWishlist} isWished={wishlistIds?.includes(item.id)} />
           </div>
         ))}
       </div>
@@ -280,7 +302,7 @@ const ScrollSection = ({ title, subtitle, products, onOpen, onAddToCart, onChatS
 };
 
 // ── All products grid ─────────────────────────────────────────────────────────
-const AllProductsGrid = ({ products, onOpen, onAddToCart, onChatSeller, onViewAll }) => {
+const AllProductsGrid = ({ products, onOpen, onAddToCart, onChatSeller, onToggleWishlist, wishlistIds, onViewAll }) => {
   if (!products.length) return (
     <div className='rounded-2xl border border-dashed border-[#ddc6bb] bg-white px-6 py-14 text-center'>
       <Package size={40} className='mx-auto text-[#d4b5a8] mb-3' />
@@ -301,12 +323,9 @@ const AllProductsGrid = ({ products, onOpen, onAddToCart, onChatSeller, onViewAl
           Browse all <ArrowRight size={12} />
         </button>
       </div>
-      <div
-        className='grid gap-3'
-        style={{ gridTemplateColumns: `repeat(${Math.min(products.length, 4)}, minmax(0, 280px))`, justifyContent: 'start' }}
-      >
+      <div className='grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4'>
         {products.map((item) => (
-          <ProductCard key={item.id} item={item} onOpen={onOpen} onAddToCart={onAddToCart} onChatSeller={onChatSeller} />
+          <ProductCard key={item.id} item={item} onOpen={onOpen} onAddToCart={onAddToCart} onChatSeller={onChatSeller} onToggleWishlist={onToggleWishlist} isWished={wishlistIds?.includes(item.id)} />
         ))}
       </div>
     </section>
@@ -417,7 +436,7 @@ const FilterPanel = ({ products, filters, maxPrice, onToggle, onPriceChange, onC
 };
 
 // ── HomeTab ───────────────────────────────────────────────────────────────────
-const HomeTab = ({ products, onBrowseCollection, onOpenProduct, onCustomRequest, onAddToCart, onChatSeller }) => {
+const HomeTab = ({ products, onBrowseCollection, onOpenProduct, onCustomRequest, onAddToCart, onChatSeller, onToggleWishlist, wishlistIds }) => {
   const [filters, setFilters] = useState({ color: [], fabric: [], design: [] });
   const [maxPrice, setMaxPrice] = useState(() => Math.max(35000, ...products.map((p) => p.price)));
   const [showMobileFilters, setShowMobileFilters] = useState(false);
@@ -502,6 +521,7 @@ const HomeTab = ({ products, onBrowseCollection, onOpenProduct, onCustomRequest,
             title='New Arrivals' subtitle='Just added'
             products={newArrivals} onOpen={onOpenProduct}
             onAddToCart={onAddToCart} onChatSeller={onChatSeller}
+            onToggleWishlist={onToggleWishlist} wishlistIds={wishlistIds}
             onViewAll={onBrowseCollection}
           />
 
@@ -510,12 +530,14 @@ const HomeTab = ({ products, onBrowseCollection, onOpenProduct, onCustomRequest,
               title='Make It Yours' subtitle='Customizable sarees'
               products={customizable} onOpen={onOpenProduct}
               onAddToCart={onAddToCart} onChatSeller={onChatSeller}
+              onToggleWishlist={onToggleWishlist} wishlistIds={wishlistIds}
             />
           )}
 
           <AllProductsGrid
             products={filtered} onOpen={onOpenProduct}
             onAddToCart={onAddToCart} onChatSeller={onChatSeller}
+            onToggleWishlist={onToggleWishlist} wishlistIds={wishlistIds}
             onViewAll={onBrowseCollection}
           />
         </div>
@@ -552,8 +574,16 @@ const CustomerDashboard = () => {
   const [cartCount, setCartCount] = useState(0);
   const [unreadCount, setUnreadCount] = useState(0);
   const [products, setProducts] = useState([]);
+  const [wishlistItems, setWishlistItems] = useState([]);
+  const [cartItemIds, setCartItemIds] = useState([]);
+  const [wishlistLoaded, setWishlistLoaded] = useState(false);
+  const [wishlistConfirm, setWishlistConfirm] = useState(null); // { type: 'add'|'remove', item }
+
+  const productsFetched = useRef(false);
 
   useEffect(() => {
+    if (productsFetched.current) return;
+    productsFetched.current = true;
     GetAllProductData(getUserId())
       .then((res) => setProducts(normalizeProducts(res)))
       .catch(() => {});
@@ -583,7 +613,54 @@ const CustomerDashboard = () => {
   useEffect(() => { window.scrollTo({ top: 0, behavior: 'smooth' }); }, [activeTab]);
 
   const handleViewDetail = (product) => { setPreviousTab(activeTab); setSelectedProduct(product); setActiveTab('product-detail'); };
-  const handleAddToCart = () => { setCartCount((c) => c + 1); setActiveTab('cart'); };
+  const handleAddToCart = (product) => {
+    setCartCount((c) => c + 1);
+    if (product?.id) setCartItemIds((prev) => [...new Set([...prev, product.id])]);
+    setActiveTab('cart');
+  };
+
+  const handleToggleWishlist = (item) => {
+    const alreadyWished = wishlistItems.find((p) => p.id === item.id);
+    setWishlistConfirm({ type: alreadyWished ? 'remove' : 'add', item });
+  };
+
+  const confirmWishlistAction = async () => {
+    if (!wishlistConfirm) return;
+    const { type, item } = wishlistConfirm;
+    setWishlistConfirm(null);
+
+    if (type === 'add') {
+      setWishlistItems((prev) => [...prev, item]);
+      try {
+        await addToWishlist({ userId: Number(getUserId()), productId: item.id });
+        showApiSuccess('Added to wishlist successfully.');
+      } catch {
+        setWishlistItems((prev) => prev.filter((p) => p.id !== item.id));
+        showApiError('Failed to add to wishlist.');
+      }
+    } else {
+      setWishlistItems((prev) => prev.filter((p) => p.id !== item.id));
+      try {
+        await removeFromWishlist(item.wishlistId);
+        showApiSuccess('Removed from wishlist.');
+      } catch {
+        setWishlistItems((prev) => [...prev, item]);
+        showApiError('Failed to remove from wishlist.');
+      }
+    }
+  };
+
+  const handleRemoveFromWishlist = (productId) => {
+    const item = wishlistItems.find((p) => p.id === productId);
+    if (item) setWishlistConfirm({ type: 'remove', item });
+  };
+
+  useEffect(() => {
+    if (activeTab !== 'wishlist' || wishlistLoaded) return;
+    getWishlist(Number(getUserId()))
+      .then((res) => { setWishlistItems(normalizeWishlist(res)); setWishlistLoaded(true); })
+      .catch(() => {});
+  }, [activeTab, wishlistLoaded]);
 
   // Called from product card Chat button — passes sellerUserId + sellerName
   const handleChatSeller = ({ sellerId, sellerName }) => {
@@ -595,6 +672,7 @@ const CustomerDashboard = () => {
   const customerTitle = useMemo(() => {
     if (activeTab === 'product-detail') return 'Product Details | Majhi Paithani';
     return ({
+      wishlist: 'My Wishlist | Majhi Paithani',
       home: 'Customer Home | Majhi Paithani',
       categories: 'Shop Sarees | Majhi Paithani',
       custom: 'Custom Design | Majhi Paithani',
@@ -629,12 +707,26 @@ const CustomerDashboard = () => {
             onCustomRequest={() => setActiveTab('custom')}
             onAddToCart={handleAddToCart}
             onChatSeller={handleChatSeller}
+            onToggleWishlist={handleToggleWishlist}
+            wishlistIds={wishlistItems.map((p) => p.id)}
           />
         );
       case 'categories':
         return <Categories onViewDetail={handleViewDetail} searchTerm={searchTerm} />;
       case 'custom':
         return <CustomDesign />;
+      case 'wishlist':
+        return (
+          <Wishlist
+            wishlistItems={wishlistItems}
+            cartItemIds={cartItemIds}
+            onRemove={handleRemoveFromWishlist}
+            onAddToCart={handleAddToCart}
+            onView={handleViewDetail}
+            onChatSeller={handleChatSeller}
+            onShop={() => setActiveTab('categories')}
+          />
+        );
       case 'cart':
         return <Cart onCheckout={() => setActiveTab('checkout')} />;
       case 'checkout':
@@ -659,6 +751,8 @@ const CustomerDashboard = () => {
             onCustomRequest={() => setActiveTab('custom')}
             onAddToCart={handleAddToCart}
             onChatSeller={handleChatSeller}
+            onToggleWishlist={handleToggleWishlist}
+            wishlistIds={wishlistItems.map((p) => p.id)}
           />
         );
     }
@@ -667,6 +761,19 @@ const CustomerDashboard = () => {
   return (
     <>
       <MetaTitle title={customerTitle} />
+      <ConfirmationModal
+        open={!!wishlistConfirm}
+        title={wishlistConfirm?.type === 'add' ? 'Add to Wishlist?' : 'Remove from Wishlist?'}
+        message={
+          wishlistConfirm?.type === 'add'
+            ? `Add "${wishlistConfirm?.item?.name}" to your wishlist?`
+            : `Remove "${wishlistConfirm?.item?.name}" from your wishlist?`
+        }
+        confirmLabel={wishlistConfirm?.type === 'add' ? 'Yes, Add' : 'Yes, Remove'}
+        cancelLabel='Cancel'
+        onConfirm={confirmWishlistAction}
+        onClose={() => setWishlistConfirm(null)}
+      />
       <CustomerLayout
         activeTab={activeTab}
         setActiveTab={setActiveTab}
