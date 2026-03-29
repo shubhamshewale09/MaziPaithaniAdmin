@@ -125,7 +125,10 @@ const ProductCard = ({ item, onOpen, onAddToCart, onChatSeller, onToggleWishlist
   };
 
   return (
-    <div className='group flex flex-col bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5'>
+    <div
+      className='group flex flex-col bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5 cursor-pointer'
+      onClick={() => onOpen(item)}
+    >
 
       {/* Image block */}
       <div className='relative overflow-hidden bg-[#faf7f5]' style={{ aspectRatio: '1/1' }}>
@@ -134,10 +137,9 @@ const ProductCard = ({ item, onOpen, onAddToCart, onChatSeller, onToggleWishlist
             src={item.images[activeImg]}
             alt={item.name}
             className='w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 cursor-pointer'
-            onClick={() => onOpen(item)}
           />
         ) : (
-          <div className='w-full h-full flex flex-col items-center justify-center cursor-pointer' onClick={() => onOpen(item)}>
+          <div className='w-full h-full flex flex-col items-center justify-center'>
             <Package size={48} className='text-[#d4b5a8]' />
             <p className='mt-2 text-xs text-[#c4a090]'>No image</p>
           </div>
@@ -571,7 +573,12 @@ const CustomerDashboard = () => {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [chatTarget, setChatTarget] = useState(null); // { sellerId, sellerName }
-  const [cartCount, setCartCount] = useState(0);
+  const [cartCount, setCartCount] = useState(() => {
+    try {
+      const d = JSON.parse(localStorage.getItem('login') || '{}');
+      return Number(d?.cartItemCount ?? 0);
+    } catch { return 0; }
+  });
   const [unreadCount, setUnreadCount] = useState(0);
   const [products, setProducts] = useState([]);
   const [wishlistItems, setWishlistItems] = useState([]);
@@ -728,7 +735,7 @@ const CustomerDashboard = () => {
           />
         );
       case 'cart':
-        return <Cart onCheckout={() => setActiveTab('checkout')} />;
+        return <Cart onCheckout={() => setActiveTab('checkout')} onChatSeller={handleChatSeller} onCartCountChange={setCartCount} />;
       case 'checkout':
         return <Checkout onBack={() => setActiveTab('cart')} onSuccess={() => setActiveTab('orders')} />;
       case 'orders':
