@@ -10,16 +10,33 @@ export const getCustomerProfile = () =>
   getApiWithAuthorization(`${Base_Url}api/customer/profile`);
 
 export const updateCustomerProfile = (userId, data) =>
-  putApiWithAuthorization(`${Base_Url}api/customer/${userId}/update-customer-profile`, data);
+  putApiWithAuthorization(
+    `${Base_Url}api/CustomerProfile/${userId}/update-customer-profile`,
+    data,
+  );
 
 export const getWishlist = () =>
   getApiWithAuthorization(`${Base_Url}api/customer/profile/wishlist`);
 
 export const removeFromWishlist = (productId) =>
-  deleteApiWithAuthorization(`${Base_Url}api/customer/profile/wishlist/${productId}`);
+  deleteApiWithAuthorization(
+    `${Base_Url}api/customer/profile/wishlist/${productId}`,
+  );
 
-export const getSavedAddresses = () =>
-  getApiWithAuthorization(`${Base_Url}api/customer/profile/addresses`);
+export const getCustomerAddresses = (userId) =>
+  getApiWithAuthorization(`${Base_Url}api/CustomerProfile/${userId}/addresses`);
+
+export const updateCustomerAddress = (addressId, data) =>
+  putApiWithAuthorization(
+    `${Base_Url}api/CustomerProfile/update-customer-address/${addressId}`,
+    data,
+  );
+
+export const deleteAddress = (addressId) =>
+  deleteApiWithAuthorization(`${Base_Url}api/CustomerProfile/delete-address/${addressId}`);
 
 export const addAddress = (data) =>
-  postApiWithAuthorization(`${Base_Url}api/customer/add-customer-aaddress`, data);
+  postApiWithAuthorization(
+    `${Base_Url}api/CustomerProfile/add-customer-address`,
+    data,
+  );
