@@ -1,22 +1,28 @@
-import {
-  getApiWithAuthorization,
-  postApiWithAuthorization,
-  putApiWithAuthorization,
-  deleteApiWithAuthorization,
-} from '../../services/auth/ApiMethod';
+import { getApiWithAuthorization, postApiWithAuthorization, putApiWithAuthorization, deleteApiWithAuthorization } from '../../services/auth/ApiMethod';
 import { Base_Url } from '../../BaseURL/BaseUrl';
 
-export const getCart = () =>
-  getApiWithAuthorization(`${Base_Url}api/customer/cart`);
+const getUserId = () => {
+  try {
+    const d = JSON.parse(localStorage.getItem('login') || '{}');
+    return d?.userId ?? d?.UserId ?? localStorage.getItem('UserId') ?? '0';
+  } catch {
+    return '0';
+  }
+};
 
-export const addToCart = (data) =>
-  postApiWithAuthorization(`${Base_Url}api/customer/cart/add`, data);
+export const getCartList = () =>
+  getApiWithAuthorization(`${Base_Url}api/cart/get-cart-list/${getUserId()}`);
 
-export const updateCartItem = (itemId, data) =>
-  putApiWithAuthorization(`${Base_Url}api/customer/cart/item/${itemId}`, data);
+export const addToCart = (productId, sellerId, quantity = 1) =>
+  postApiWithAuthorization(`${Base_Url}api/cart/add-to-cart`, {
+    userId: Number(getUserId()),
+    productId,
+    sellerId,
+    quantity,
+  });
 
-export const removeCartItem = (itemId) =>
-  deleteApiWithAuthorization(`${Base_Url}api/customer/cart/item/${itemId}`);
+export const updateCartQuantity = (cartItemId, quantity) =>
+  putApiWithAuthorization(`${Base_Url}api/cart/update-quantity/${cartItemId}`, { quantity });
 
-export const clearCart = () =>
-  deleteApiWithAuthorization(`${Base_Url}api/customer/cart/clear`);
+export const deleteCartItem = (cartItemId) =>
+  deleteApiWithAuthorization(`${Base_Url}api/cart/delete-item-from-cart/${cartItemId}`);

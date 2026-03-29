@@ -30,6 +30,7 @@ import Profile from '../Profile/Profile';
 import { useAuth } from '../../context/auth/AuthContext';
 import { showApiSuccess } from '../../Utils/Utils';
 import { GetAllProductData } from '../../services/Product/ProductApi';
+import { addToCart as addToCartApi } from '../../ServiceCustmer/Cart/CartApi';
 
 const getUserId = () => {
   try {
@@ -94,7 +95,10 @@ const ProductCard = ({ item, onOpen, onAddToCart, onChatSeller }) => {
   };
 
   return (
-    <div className='group flex flex-col bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5'>
+    <div
+      className='group flex flex-col bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5 cursor-pointer'
+      onClick={() => onOpen(item)}
+    >
 
       {/* Image block */}
       <div className='relative overflow-hidden bg-[#faf7f5]' style={{ aspectRatio: '4/5' }}>
@@ -103,10 +107,9 @@ const ProductCard = ({ item, onOpen, onAddToCart, onChatSeller }) => {
             src={item.images[activeImg]}
             alt={item.name}
             className='w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 cursor-pointer'
-            onClick={() => onOpen(item)}
           />
         ) : (
-          <div className='w-full h-full flex flex-col items-center justify-center cursor-pointer' onClick={() => onOpen(item)}>
+          <div className='w-full h-full flex flex-col items-center justify-center'>
             <Package size={48} className='text-[#d4b5a8]' />
             <p className='mt-2 text-xs text-[#c4a090]'>No image</p>
           </div>
@@ -171,7 +174,7 @@ const ProductCard = ({ item, onOpen, onAddToCart, onChatSeller }) => {
           <p className='text-[11px] text-[#a6806f] font-medium truncate'>{item.seller || 'Paithani Artisan'}</p>
         </div>
 
-        <p className='text-sm font-bold text-[#1a0a07] leading-snug line-clamp-2 cursor-pointer hover:text-[#7a1e2c] transition-colors' onClick={() => onOpen(item)}>
+        <p className='text-sm font-bold text-[#1a0a07] leading-snug line-clamp-2 hover:text-[#7a1e2c] transition-colors'>
           {item.name}
         </p>
 
@@ -301,9 +304,15 @@ const AllProductsGrid = ({ products, onOpen, onAddToCart, onChatSeller, onViewAl
           Browse all <ArrowRight size={12} />
         </button>
       </div>
+      {/* mobile: 2 cols full-width; sm+: cap to product count so no blank space */}
+      <div className='grid grid-cols-2 gap-3 sm:hidden'>
+        {products.map((item) => (
+          <ProductCard key={item.id} item={item} onOpen={onOpen} onAddToCart={onAddToCart} onChatSeller={onChatSeller} />
+        ))}
+      </div>
       <div
-        className='grid gap-3'
-        style={{ gridTemplateColumns: `repeat(${Math.min(products.length, 4)}, minmax(0, 280px))`, justifyContent: 'start' }}
+        className='hidden sm:grid gap-3'
+        style={{ gridTemplateColumns: `repeat(${Math.min(products.length, 4)}, minmax(0, 1fr))` }}
       >
         {products.map((item) => (
           <ProductCard key={item.id} item={item} onOpen={onOpen} onAddToCart={onAddToCart} onChatSeller={onChatSeller} />
@@ -549,9 +558,16 @@ const CustomerDashboard = () => {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [chatTarget, setChatTarget] = useState(null); // { sellerId, sellerName }
-  const [cartCount, setCartCount] = useState(0);
+  const [cartCount, setCartCount] = useState(() => {
+    try {
+      const d = JSON.parse(localStorage.getItem('login') || '{}');
+      return Number(d?.cartItemCount ?? 0);
+    } catch { return 0; }
+  });
   const [unreadCount, setUnreadCount] = useState(0);
   const [products, setProducts] = useState([]);
+  const [confirmItem, setConfirmItem] = useState(null); // { product, quantity }
+  const [addingToCart, setAddingToCart] = useState(false);
 
   useEffect(() => {
     GetAllProductData(getUserId())
@@ -583,7 +599,30 @@ const CustomerDashboard = () => {
   useEffect(() => { window.scrollTo({ top: 0, behavior: 'smooth' }); }, [activeTab]);
 
   const handleViewDetail = (product) => { setPreviousTab(activeTab); setSelectedProduct(product); setActiveTab('product-detail'); };
-  const handleAddToCart = () => { setCartCount((c) => c + 1); setActiveTab('cart'); };
+  // Called from product card / product detail — shows confirmation popup
+  const handleAddToCart = (product, quantity = 1) => {
+    setConfirmItem({ product, quantity });
+  };
+
+  const confirmAddToCart = async () => {
+    if (!confirmItem) return;
+    setAddingToCart(true);
+    try {
+      const res = await addToCartApi(
+        confirmItem.product.iProductId ?? confirmItem.product.id,
+        confirmItem.product.sellerUserId,
+        confirmItem.quantity,
+      );
+      if (res?.cartItemCount != null) setCartCount(Number(res.cartItemCount));
+      else setCartCount((c) => c + 1);
+      setConfirmItem(null);
+      setActiveTab('cart');
+    } catch {
+      // error handled by ApiMethod
+    } finally {
+      setAddingToCart(false);
+    }
+  };
 
   // Called from product card Chat button — passes sellerUserId + sellerName
   const handleChatSeller = ({ sellerId, sellerName }) => {
@@ -636,7 +675,7 @@ const CustomerDashboard = () => {
       case 'custom':
         return <CustomDesign />;
       case 'cart':
-        return <Cart onCheckout={() => setActiveTab('checkout')} />;
+        return <Cart onCheckout={() => setActiveTab('checkout')} onChatSeller={handleChatSeller} onCartCountChange={setCartCount} />;
       case 'checkout':
         return <Checkout onBack={() => setActiveTab('cart')} onSuccess={() => setActiveTab('orders')} />;
       case 'orders':
@@ -667,6 +706,48 @@ const CustomerDashboard = () => {
   return (
     <>
       <MetaTitle title={customerTitle} />
+
+      {/* ── Add to Cart confirmation popup ── */}
+      {confirmItem && (
+        <div className='fixed inset-0 z-[999] flex items-center justify-center p-4'>
+          <button
+            type='button'
+            className='absolute inset-0 bg-black/50 backdrop-blur-sm'
+            onClick={() => setConfirmItem(null)}
+            aria-label='Close'
+          />
+          <div className='relative w-full max-w-sm animate-[fadeInUp_0.25s_ease] rounded-[32px] border border-[#efdcd2] bg-white p-6 shadow-[0_32px_80px_rgba(94,35,23,0.22)]'>
+            <div className='flex h-14 w-14 items-center justify-center rounded-[20px] bg-[#fff1e7] text-[#7a1e2c]'>
+              <ShoppingCart size={26} />
+            </div>
+            <h2 className='mt-4 text-xl font-bold text-[#34160f]'>Add to Cart?</h2>
+            <p className='mt-2 text-sm leading-6 text-[#8b6759]'>
+              <span className='font-semibold text-[#34160f]'>{confirmItem.product.name}</span> will be added to your cart.
+            </p>
+            <p className='mt-1 text-sm font-bold text-[#7a1e2c]'>
+              ₹{(confirmItem.product.price ?? 0).toLocaleString('en-IN')}
+            </p>
+            <div className='mt-6 flex gap-3'>
+              <button
+                type='button'
+                onClick={() => setConfirmItem(null)}
+                className='flex-1 rounded-full border border-[#ead9cf] py-3 text-sm font-semibold text-[#6b5048] transition hover:bg-[#fff7f2]'
+              >
+                Cancel
+              </button>
+              <button
+                type='button'
+                onClick={confirmAddToCart}
+                disabled={addingToCart}
+                className='flex-1 rounded-full bg-[#7a1e2c] py-3 text-sm font-bold text-white transition hover:bg-[#651623] active:scale-95 disabled:opacity-60'
+              >
+                {addingToCart ? 'Adding…' : 'Yes, Add'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <CustomerLayout
         activeTab={activeTab}
         setActiveTab={setActiveTab}
