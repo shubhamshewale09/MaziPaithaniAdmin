@@ -4,7 +4,7 @@ import {
   User, Mail, Phone, CheckCircle2, Home, Briefcase, Save, X,
 } from 'lucide-react';
 import { showApiSuccess, showApiError } from '../../Utils/Utils';
-import { updateCustomerProfile, addAddress } from '../../ServiceCustmer/Profile/ProfileApi';
+import { updateCustomerProfile, addAddress, updateCustomerAddress, getCustomerAddresses, deleteAddress } from '../../ServiceCustmer/Profile/ProfileApi';
 
 const TABS = [
   { id: 'details',   label: 'My Details', icon: User   },
@@ -19,20 +19,28 @@ const getLoginInfo = () => {
   catch { return {}; }
 };
 
-const buildAddresses = (info) => {
-  const a = info?.address;
-  if (!a) return [];
-  const line     = [a.addressLine1, a.addressLine2].filter(Boolean).join(', ');
-  const cityState = [a.city, a.state, a.postalCode].filter(Boolean).join(', ');
-  return [{
-    id:      1,
-    label:   a.addressType || 'Address',
-    icon:    a.addressType?.toLowerCase() === 'home' ? Home : Briefcase,
-    address: [line, cityState, a.country].filter(Boolean).join(', '),
-    phone:   info.phoneNumber || '',
-    default: true,
-  }];
-};
+const mapApiAddresses = (list, phone) =>
+  [...list]
+    .sort((a, b) => (b.isDefault ? 1 : 0) - (a.isDefault ? 1 : 0))
+    .map((a) => ({
+      id:        a.addressId,
+      addressId: a.addressId,
+      label:     a.addressType || 'Address',
+      icon:      a.addressType?.toLowerCase() === 'home' ? Home : Briefcase,
+      address:   [a.addressLine1, a.addressLine2, a.city, a.state, a.postalCode, a.country].filter(Boolean).join(', '),
+      phone,
+      default:   a.isDefault,
+      rawFields: {
+        addressLine1: a.addressLine1 || '',
+        addressLine2: a.addressLine2 || '',
+        city:         a.city         || '',
+        state:        a.state        || '',
+        postalCode:   a.postalCode   || '',
+        country:      a.country      || '',
+        addressType:  a.addressType  || '',
+        isDefault:    a.isDefault    || false,
+      },
+    }));
 
 const Profile = ({ onLogout }) => {
   const [activeTab, setActiveTab] = useState('details');
@@ -42,6 +50,8 @@ const Profile = ({ onLogout }) => {
   const [addSaving, setAddSaving]       = useState(false);
   const emptyAddrForm = { addressLine1: '', addressLine2: '', city: '', state: '', postalCode: '', country: '', addressType: '', isDefault: false };
   const [addrForm, setAddrForm] = useState(emptyAddrForm);
+  const [editModal, setEditModal] = useState(null); // { id, form }
+  const [editSaving, setEditSaving] = useState(false);
 
   const loginInfo = getLoginInfo();
 
@@ -54,7 +64,8 @@ const Profile = ({ onLogout }) => {
     profileImage: loginInfo.profileImage || null,
   });
 
-  const [addresses, setAddresses] = useState(() => buildAddresses(loginInfo));
+  const [addresses, setAddresses] = useState([]);
+  const [addrLoading, setAddrLoading] = useState(false);
 
   useEffect(() => {
     const info = getLoginInfo();
@@ -66,8 +77,16 @@ const Profile = ({ onLogout }) => {
       userId:       info.userId       || null,
       profileImage: info.profileImage || null,
     });
-    setAddresses(buildAddresses(info));
   }, []);
+
+  useEffect(() => {
+    if (activeTab !== 'addresses' || !form.userId) return;
+    setAddrLoading(true);
+    getCustomerAddresses(form.userId)
+      .then((res) => setAddresses(mapApiAddresses(Array.isArray(res) ? res : [], form.phone)))
+      .catch((err) => showApiError(err, 'Failed to load addresses.'))
+      .finally(() => setAddrLoading(false));
+  }, [activeTab, form.userId]);
 
   const fullName = [form.firstName, form.lastName].filter(Boolean).join(' ');
   const avatarLetter = form.firstName?.charAt(0)?.toUpperCase() || 'U';
@@ -98,20 +117,12 @@ const Profile = ({ onLogout }) => {
     setAddSaving(true);
     try {
       await addAddress({ userId: form.userId, ...addrForm });
-      const AddrIcon  = addrForm.addressType?.toLowerCase() === 'home' ? Home : Briefcase;
-      const line      = [addrForm.addressLine1, addrForm.addressLine2].filter(Boolean).join(', ');
-      const cityState = [addrForm.city, addrForm.state, addrForm.postalCode].filter(Boolean).join(', ');
-      setAddresses((prev) => [...prev, {
-        id:      Date.now(),
-        label:   addrForm.addressType || 'Address',
-        icon:    AddrIcon,
-        address: [line, cityState, addrForm.country].filter(Boolean).join(', '),
-        phone:   form.phone,
-        default: addrForm.isDefault,
-      }]);
       showApiSuccess('Address added successfully.');
       setShowAddModal(false);
       setAddrForm(emptyAddrForm);
+      // re-fetch to get server-assigned addressId and updated list
+      const updated = await getCustomerAddresses(form.userId);
+      setAddresses(mapApiAddresses(Array.isArray(updated) ? updated : [], form.phone));
     } catch (err) {
       showApiError(err, 'Failed to add address.');
     } finally {
@@ -298,7 +309,11 @@ const Profile = ({ onLogout }) => {
           </div>
 
           <div className='space-y-4 p-6'>
-            {addresses.length === 0 ? (
+            {addrLoading ? (
+              <div className='flex items-center justify-center py-12'>
+                <div className='h-8 w-8 animate-spin rounded-full border-4 border-[#ead9cf] border-t-[#7a1e2c]' />
+              </div>
+            ) : addresses.length === 0 ? (
               <div className='flex flex-col items-center justify-center py-12 text-center'>
                 <div className='flex h-16 w-16 items-center justify-center rounded-full bg-[#f9ede7] text-[#7a1e2c]'>
                   <MapPin size={28} />
@@ -333,12 +348,24 @@ const Profile = ({ onLogout }) => {
                     <div className='flex shrink-0 gap-2 pl-16 sm:pl-0'>
                       <button
                         type='button'
+                        onClick={() => { const addr = addresses.find((a) => a.id === id); setEditModal({ id, addressId: addr?.addressId, form: { ...(addr?.rawFields || { addressLine1: '', addressLine2: '', city: '', state: '', postalCode: '', country: '', addressType: label, isDefault: isDefault || false }) } }); }}
                         className='inline-flex items-center gap-1.5 rounded-xl border border-[#ead9cf] bg-white px-3 py-2 text-xs font-semibold text-[#7a1e2c] transition hover:bg-[#f9ede7]'
                       >
                         <Edit3 size={12} /> Edit
                       </button>
                       <button
                         type='button'
+                        onClick={async () => {
+                          const addr = addresses.find((a) => a.id === id);
+                          if (!addr?.addressId) return;
+                          try {
+                            await deleteAddress(addr.addressId);
+                            setAddresses((prev) => prev.filter((a) => a.id !== id));
+                            showApiSuccess('Address removed successfully.');
+                          } catch (err) {
+                            showApiError(err, 'Failed to remove address.');
+                          }
+                        }}
                         className='inline-flex items-center gap-1.5 rounded-xl border border-[#f1d5cf] bg-white px-3 py-2 text-xs font-semibold text-[#c44634] transition hover:bg-red-50'
                       >
                         <Trash2 size={12} /> Remove
@@ -352,16 +379,77 @@ const Profile = ({ onLogout }) => {
         </section>
       )}
 
+      {/* ── Edit Address Modal ── */}
+      {editModal && (
+        <div className='fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4' style={{ backdropFilter: 'blur(6px)', background: 'rgba(47,29,24,0.45)' }}>
+          <div className='w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-t-[28px] sm:rounded-[28px] bg-white shadow-2xl'>
+            <div className='sticky top-0 z-10 flex items-center justify-between border-b border-[#f5e8e2] bg-gradient-to-r from-[#fffaf6] to-white px-5 py-4'>
+              <div>
+                <p className='text-[11px] font-bold uppercase tracking-[0.24em] text-[#a6806f]'>Edit Address</p>
+                <h3 className='mt-0.5 text-base font-bold text-[#34160f]'>Update delivery address</h3>
+              </div>
+              <button type='button' onClick={() => setEditModal(null)} className='flex h-9 w-9 items-center justify-center rounded-full text-[#a67d65] hover:bg-[#f9ede7] hover:text-[#7a1e2c] transition'>
+                <X size={18} />
+              </button>
+            </div>
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                setEditSaving(true);
+                try {
+                  const payload = { ...editModal.form };
+                  await updateCustomerAddress(editModal.addressId, payload);
+                  showApiSuccess('Address updated successfully.');
+                  setEditModal(null);
+                  const updated = await getCustomerAddresses(form.userId);
+                  setAddresses(mapApiAddresses(Array.isArray(updated) ? updated : [], form.phone));
+                } catch (err) {
+                  showApiError(err, 'Failed to update address.');
+                } finally {
+                  setEditSaving(false);
+                }
+              }}
+              className='space-y-4 p-5'
+            >
+              <div className='grid grid-cols-1 gap-4 sm:grid-cols-2'>
+                {[
+                  { key: 'addressLine1', label: 'Address Line 1', placeholder: 'Street / Building', required: true },
+                  { key: 'addressLine2', label: 'Address Line 2', placeholder: 'Apt / Block (optional)', required: false },
+                  { key: 'city',        label: 'City',           placeholder: 'Enter city',          required: true },
+                  { key: 'state',       label: 'State',          placeholder: 'Enter state',         required: true },
+                  { key: 'postalCode',  label: 'Postal Code',    placeholder: 'Enter postal code',   required: true },
+                  { key: 'country',     label: 'Country',        placeholder: 'Enter country',       required: true },
+                  { key: 'addressType', label: 'Address Type',   placeholder: 'Home / Work / Other', required: true },
+                ].map(({ key, label, placeholder, required }) => (
+                  <div key={key}>
+                    <label className='mb-1.5 block text-xs font-bold uppercase tracking-[0.18em] text-[#a6806f]'>{label}{required && <span className='ml-0.5 text-red-400'>*</span>}</label>
+                    <input value={editModal.form[key]} onChange={(e) => setEditModal((prev) => ({ ...prev, form: { ...prev.form, [key]: e.target.value } }))} placeholder={placeholder} required={required} className={inputCls} />
+                  </div>
+                ))}
+              </div>
+              <label className='flex cursor-pointer items-center gap-3 rounded-2xl border border-[#f0e0d6] bg-[#fffaf6] px-4 py-3'>
+                <input type='checkbox' checked={editModal.form.isDefault} onChange={(e) => setEditModal((prev) => ({ ...prev, form: { ...prev.form, isDefault: e.target.checked } }))} className='h-4 w-4 rounded accent-[#7a1e2c]' />
+                <span className='text-sm font-semibold text-[#34160f]'>Set as default address</span>
+              </label>
+              <div className='flex gap-3 pt-1 pb-2'>
+                <button type='button' onClick={() => setEditModal(null)} className='flex-1 rounded-2xl border border-[#ead9cf] bg-white py-3 text-sm font-semibold text-[#8b6759] transition hover:bg-[#f9f0ec]'>Cancel</button>
+                <button type='submit' disabled={editSaving} className='flex-1 rounded-2xl bg-[#7a1e2c] py-3 text-sm font-semibold text-white shadow-md transition hover:bg-[#651623] disabled:opacity-60'>{editSaving ? 'Saving...' : 'Update Address'}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* ── Add Address Modal ── */}
       {showAddModal && (
-        <div className='fixed inset-0 z-50 flex items-center justify-center p-4' style={{ backdropFilter: 'blur(6px)', background: 'rgba(47,29,24,0.45)' }}>
-          <div className='w-full max-w-lg overflow-hidden rounded-[28px] bg-white shadow-2xl'>
+        <div className='fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4' style={{ backdropFilter: 'blur(6px)', background: 'rgba(47,29,24,0.45)' }}>
+          <div className='w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-t-[28px] sm:rounded-[28px] bg-white shadow-2xl'>
 
             {/* Modal header */}
-            <div className='flex items-center justify-between border-b border-[#f5e8e2] bg-gradient-to-r from-[#fffaf6] to-white px-6 py-5'>
+            <div className='sticky top-0 z-10 flex items-center justify-between border-b border-[#f5e8e2] bg-gradient-to-r from-[#fffaf6] to-white px-5 py-4'>
               <div>
                 <p className='text-[11px] font-bold uppercase tracking-[0.24em] text-[#a6806f]'>New Address</p>
-                <h3 className='mt-0.5 text-lg font-bold text-[#34160f]'>Add delivery address</h3>
+                <h3 className='mt-0.5 text-base font-bold text-[#34160f]'>Add delivery address</h3>
               </div>
               <button
                 type='button'
@@ -373,16 +461,16 @@ const Profile = ({ onLogout }) => {
             </div>
 
             {/* Modal form */}
-            <form onSubmit={handleAddAddress} className='space-y-4 p-6'>
-              <div className='grid gap-4 sm:grid-cols-2'>
+            <form onSubmit={handleAddAddress} className='space-y-4 p-5'>
+              <div className='grid grid-cols-1 gap-4 sm:grid-cols-2'>
                 {[
-                  { key: 'addressLine1', label: 'Address Line 1', placeholder: 'Street / Building', required: true  },
+                  { key: 'addressLine1', label: 'Address Line 1', placeholder: 'Street / Building',    required: true  },
                   { key: 'addressLine2', label: 'Address Line 2', placeholder: 'Apt / Block (optional)', required: false },
-                  { key: 'city',         label: 'City',           placeholder: 'Enter city',          required: true  },
-                  { key: 'state',        label: 'State',          placeholder: 'Enter state',         required: true  },
-                  { key: 'postalCode',   label: 'Postal Code',    placeholder: 'Enter postal code',   required: true  },
-                  { key: 'country',      label: 'Country',        placeholder: 'Enter country',       required: true  },
-                  { key: 'addressType',  label: 'Address Type',   placeholder: 'Home / Work / Other', required: true  },
+                  { key: 'city',         label: 'City',           placeholder: 'Enter city',            required: true  },
+                  { key: 'state',        label: 'State',          placeholder: 'Enter state',           required: true  },
+                  { key: 'postalCode',   label: 'Postal Code',    placeholder: 'Enter postal code',     required: true  },
+                  { key: 'country',      label: 'Country',        placeholder: 'Enter country',         required: true  },
+                  { key: 'addressType',  label: 'Address Type',   placeholder: 'Home / Work / Other',   required: true  },
                 ].map(({ key, label, placeholder, required }) => (
                   <div key={key}>
                     <label className='mb-1.5 block text-xs font-bold uppercase tracking-[0.18em] text-[#a6806f]'>
@@ -399,7 +487,6 @@ const Profile = ({ onLogout }) => {
                 ))}
               </div>
 
-              {/* Default toggle */}
               <label className='flex cursor-pointer items-center gap-3 rounded-2xl border border-[#f0e0d6] bg-[#fffaf6] px-4 py-3'>
                 <input
                   type='checkbox'
@@ -410,8 +497,7 @@ const Profile = ({ onLogout }) => {
                 <span className='text-sm font-semibold text-[#34160f]'>Set as default address</span>
               </label>
 
-              {/* Actions */}
-              <div className='flex gap-3 pt-1'>
+              <div className='flex gap-3 pt-1 pb-2'>
                 <button
                   type='button'
                   onClick={() => { setShowAddModal(false); setAddrForm(emptyAddrForm); }}
