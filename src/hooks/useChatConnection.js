@@ -13,48 +13,58 @@ const getLoggedInUserId = () => {
   }
 };
 
-// Shared singleton connection across the app
 let sharedConnection = null;
 let sharedConnectionPromise = null;
 const listeners = new Set();
 
 const notifyListeners = () => listeners.forEach((fn) => fn());
 
+const buildConnection = (userId) => {
+  const conn = new signalR.HubConnectionBuilder()
+    .withUrl(`${HUB_URL}?userId=${userId}`, {
+      accessTokenFactory: () => {
+        try { return JSON.parse(localStorage.getItem('login') || '{}')?.token || ''; }
+        catch { return ''; }
+      },
+    })
+    .withAutomaticReconnect([0, 2000, 5000, 10000, 30000])
+    .configureLogging(signalR.LogLevel.Warning)
+    .build();
+
+  // On every reconnect — notify all hooks so they re-join rooms
+  conn.onreconnected(() => {
+    sharedConnection = conn;
+    notifyListeners();
+  });
+
+  conn.onclose(() => {
+    sharedConnection = null;
+    sharedConnectionPromise = null;
+    notifyListeners();
+  });
+
+  return conn;
+};
+
 export const useChatConnection = () => {
-  const [connection, setConnection] = useState(sharedConnection);
+  const [, forceUpdate] = useState(0);
   const mountedRef = useRef(true);
 
   useEffect(() => {
     mountedRef.current = true;
 
-    const sync = () => {
-      if (mountedRef.current) setConnection(sharedConnection);
-    };
+    const sync = () => { if (mountedRef.current) forceUpdate((n) => n + 1); };
     listeners.add(sync);
 
     const userId = getLoggedInUserId();
-    if (!userId) return;
+    if (!userId) return () => { mountedRef.current = false; listeners.delete(sync); };
 
     if (sharedConnection?.state === signalR.HubConnectionState.Connected) {
-      setConnection(sharedConnection);
-      return;
+      return () => { mountedRef.current = false; listeners.delete(sync); };
     }
 
     if (!sharedConnectionPromise) {
-      const conn = new signalR.HubConnectionBuilder()
-        .withUrl(`${HUB_URL}?userId=${userId}`, {
-          accessTokenFactory: () => {
-            try {
-              return JSON.parse(localStorage.getItem('login') || '{}')?.token || '';
-            } catch {
-              return '';
-            }
-          },
-        })
-        .withAutomaticReconnect()
-        .configureLogging(signalR.LogLevel.Warning)
-        .build();
-
+      const conn = buildConnection(userId);
       sharedConnectionPromise = conn
         .start()
         .then(() => {
@@ -72,12 +82,12 @@ export const useChatConnection = () => {
     };
   }, []);
 
-  return connection;
+  return sharedConnection;
 };
 
 export const disconnectChatHub = async () => {
   if (sharedConnection) {
-    await sharedConnection.stop();
+    await sharedConnection.stop().catch(() => {});
     sharedConnection = null;
     sharedConnectionPromise = null;
     notifyListeners();

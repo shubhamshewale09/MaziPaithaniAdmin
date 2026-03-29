@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import {
   Bell,
   Grid2X2,
+  Heart,
   Home,
   Menu,
   MessageSquare,
@@ -17,6 +18,7 @@ export const NAV_LINKS = [
   { id: 'home', label: 'Home', icon: Home },
   { id: 'categories', label: 'Shop', icon: Grid2X2 },
   { id: 'custom', label: 'Custom', icon: Palette },
+  { id: 'wishlist', label: 'Wishlist', icon: Heart },
   { id: 'orders', label: 'Orders', icon: Package },
   { id: 'messages', label: 'Messages', icon: MessageSquare },
   { id: 'profile', label: 'Profile', icon: User },
