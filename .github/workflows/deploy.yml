@@ -38,7 +38,7 @@ jobs:
       - name: 🔐 Test SSH Connection
         uses: appleboy/ssh-action@v1.0.0
         with:
-          host: 15.207.106.250
+          host: 13.127.230.243
           username: Administrator
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
@@ -49,7 +49,7 @@ jobs:
       - name: 🛑 Stop IIS App Pool
         uses: appleboy/ssh-action@v1.0.0
         with:
-          host: 15.207.106.250
+          host: 13.127.230.243
           username: Administrator
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
@@ -59,7 +59,7 @@ jobs:
       - name: 📦 Backup Existing Files
         uses: appleboy/ssh-action@v1.0.0
         with:
-          host: 15.207.106.250
+          host: 13.127.230.243
           username: Administrator
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
@@ -86,7 +86,7 @@ jobs:
       - name: 🚀 Upload Build
         uses: appleboy/scp-action@v0.1.7
         with:
-          host: 15.207.106.250
+          host: 13.127.230.243
           username: Administrator
           key: ${{ secrets.EC2_SSH_KEY }}
           source: "build/*"
@@ -97,7 +97,7 @@ jobs:
       - name: ▶️ Start IIS App Pool
         uses: appleboy/ssh-action@v1.0.0
         with:
-          host: 15.207.106.250
+          host: 13.127.230.243
           username: Administrator
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
