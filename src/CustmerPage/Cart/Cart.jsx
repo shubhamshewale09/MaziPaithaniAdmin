@@ -72,7 +72,7 @@ const CartItemCard = ({ item, index, onAskRemove, onAskQty, onChatSeller }) => {
       }}
     >
       {/* ── Image ── */}
-      <div className='relative w-full overflow-hidden bg-gradient-to-br from-[#fff8f1] to-[#f7d9c6]' style={{ aspectRatio: '3/2' }}>
+      <div className='relative w-full overflow-hidden bg-gradient-to-br from-[#fff8f1] to-[#f7d9c6]' style={{ aspectRatio: '1/1' }}>
         {src ? (
           <img
             src={src}
@@ -326,8 +326,8 @@ const Cart = memo(({ onCheckout, onChatSeller, onCartCountChange }) => {
         {/* ── Products grid + summary ── */}
         <div className='grid gap-5 lg:grid-cols-[1fr_300px]'>
 
-          {/* 2-per-row product grid */}
-          <div className='grid grid-cols-2 gap-2 sm:grid-cols-3'>
+          {/* product grid */}
+          <div className='grid grid-cols-1 gap-2 min-[400px]:grid-cols-2 sm:grid-cols-3'>
             {items.map((item, i) => (
               <CartItemCard
                 key={item.cartItemId}
@@ -343,7 +343,7 @@ const Cart = memo(({ onCheckout, onChatSeller, onCartCountChange }) => {
           {/* ── Order summary — same style as checkout aside ── */}
           <aside
             className='rounded-[28px] border border-[#efdcd2] bg-white p-5 lg:sticky lg:top-28 lg:h-fit'
-            style={{ boxShadow: '0 18px_45px rgba(94,35,23,0.08)', animation: 'cmSlideUp 0.38s ease' }}
+            style={{ boxShadow: '0 18px 45px rgba(94,35,23,0.08)', animation: 'cmSlideUp 0.38s ease' }}
           >
             <p className='text-xs font-semibold uppercase tracking-[0.24em] text-[#a6806f]'>Order summary</p>
 

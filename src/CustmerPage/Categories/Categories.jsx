@@ -125,7 +125,7 @@ const ProductCard = ({ item, onViewDetail }) => (
       >
         <Heart size={15} />
       </button>
-      <div className='flex h-52 items-center justify-center rounded-[22px] border border-white/40 bg-white/30 text-7xl shadow-inner'>
+      <div className='flex aspect-square items-center justify-center rounded-[22px] border border-white/40 bg-white/30 text-7xl shadow-inner'>
         S
       </div>
     </div>

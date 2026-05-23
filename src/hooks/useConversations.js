@@ -82,6 +82,9 @@ export const useConversations = () => {
 
     const handleReceive = (message) => {
       const roomId = message.iRoomId ?? message.roomId;
+      const userId = getLoggedInUserId();
+      const isOwnMessage = String(message.iSenderUserId) === String(userId);
+
       setConversations((prev) => {
         const exists = prev.some((c) => c.roomId === roomId);
         if (!exists) {
@@ -89,10 +92,15 @@ export const useConversations = () => {
           fetchConversations();
           return prev;
         }
-        // Just update the preview — NO API call
+        // Update preview + bump unread for incoming messages
         const updated = prev.map((c) =>
           c.roomId === roomId
-            ? { ...c, lastMessage: message.sMessage, lastMessageTime: message.dSentDate }
+            ? {
+                ...c,
+                lastMessage:     message.sMessage,
+                lastMessageTime: message.dSentDate,
+                unreadCount:     isOwnMessage ? (c.unreadCount ?? 0) : (c.unreadCount ?? 0) + 1,
+              }
             : c
         );
         return moveToTop(updated, roomId);

@@ -3,13 +3,12 @@ import { getChatHistory, sendChatMessage } from '../ServiceCustmer/Messages/Mess
 import { useChatConnection } from './useChatConnection';
 
 export const useChat = (senderId, receiverId, initialRoomId) => {
-  const connection  = useChatConnection();
-  const [messages, setMessages] = useState([]);
-  const [loading, setLoading]   = useState(false);
-  const roomIdRef   = useRef(initialRoomId ?? null);
-  const seenIds     = useRef(new Set());
-  const loadedRef   = useRef(false);
-  // texts currently in-flight — block SignalR echo for sender's own messages
+  const connection   = useChatConnection();
+  const [messages, setMessages]             = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(true);
+  const roomIdRef    = useRef(initialRoomId ?? null);
+  const seenIds      = useRef(new Set());
+  // NOTE: no loadedRef — we reload whenever senderId/receiverId/roomId changes
   const pendingTexts = useRef(new Set());
 
   const msgKey = (m) =>
@@ -23,18 +22,19 @@ export const useChat = (senderId, receiverId, initialRoomId) => {
     }
   }, []);
 
-  // Load history ONCE
+  // ── Load history — reruns whenever conversation changes ──────────────────
   useEffect(() => {
-    if (!senderId && !roomIdRef.current) return;
-    if (loadedRef.current) return;
-    loadedRef.current = true;
+    if (!senderId && !initialRoomId) return;
+
     let cancelled = false;
-    setLoading(true);
+    roomIdRef.current = initialRoomId ?? null;
+    seenIds.current   = new Set();
+    setMessages([]);
+    setHistoryLoading(true);
 
     getChatHistory(senderId, receiverId, roomIdRef.current)
       .then((res) => {
         if (cancelled) return;
-        seenIds.current = new Set();
         const msgs = res?.messages ?? [];
         msgs.forEach((m) => seenIds.current.add(msgKey(m)));
         setMessages(msgs);
@@ -44,30 +44,28 @@ export const useChat = (senderId, receiverId, initialRoomId) => {
         }
       })
       .catch(() => {})
-      .finally(() => { if (!cancelled) setLoading(false); });
+      .finally(() => { if (!cancelled) setHistoryLoading(false); });
 
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [senderId, receiverId]);
+  }, [senderId, receiverId, initialRoomId]);
 
-  // Re-join on reconnect — no history reload
+  // ── Re-join room on reconnect ──────────────────────────────────────────────
   useEffect(() => {
     if (connection?.state === 'Connected' && roomIdRef.current) {
       joinRoom(connection, roomIdRef.current);
     }
   }, [connection, joinRoom]);
 
-  // ReceiveMessage — skip sender's own echo while message is in-flight
+  // ── ReceiveMessage ─────────────────────────────────────────────────────────
   useEffect(() => {
     if (!connection) return;
 
     const handler = (msg) => {
       const isMine = String(msg.iSenderUserId) === String(senderId);
 
-      // If this is the sender's own echo and we have it pending, skip it
-      // (the optimistic bubble already shows it)
+      // Suppress echo of own in-flight messages (optimistic bubble already shows)
       if (isMine && pendingTexts.current.has(msg.sMessage)) {
-        // Mark the real ID so we don't add it later either
         seenIds.current.add(msgKey(msg));
         return;
       }
@@ -82,7 +80,7 @@ export const useChat = (senderId, receiverId, initialRoomId) => {
     return () => connection.off('ReceiveMessage', handler);
   }, [connection, senderId]);
 
-  // Leave room on unmount
+  // ── Leave room on unmount ──────────────────────────────────────────────────
   useEffect(() => {
     return () => {
       if (connection?.state === 'Connected' && roomIdRef.current) {
@@ -91,6 +89,7 @@ export const useChat = (senderId, receiverId, initialRoomId) => {
     };
   }, [connection]);
 
+  // ── Send message ───────────────────────────────────────────────────────────
   const sendMessage = useCallback(
     async (text) => {
       if (!text?.trim() || !senderId || !receiverId) return;
@@ -98,10 +97,9 @@ export const useChat = (senderId, receiverId, initialRoomId) => {
       const trimmed = text.trim();
       const tempId  = `opt-${Date.now()}`;
 
-      // Track in-flight text to suppress SignalR echo
       pendingTexts.current.add(trimmed);
 
-      // Show optimistic bubble immediately — no loading state
+      // Add optimistic bubble immediately — always visible regardless of loading
       const optimistic = {
         iMessageId:      tempId,
         iSenderUserId:   senderId,
@@ -124,7 +122,6 @@ export const useChat = (senderId, receiverId, initialRoomId) => {
           joinRoom(connection, res.roomId);
         }
 
-        // Replace optimistic with real message from server response
         if (res?.message) {
           const realKey = msgKey(res.message);
           seenIds.current.add(realKey);
@@ -132,12 +129,13 @@ export const useChat = (senderId, receiverId, initialRoomId) => {
             prev.map((m) => (m.iMessageId === tempId ? { ...res.message } : m))
           );
         } else {
-          // No message in response — just strip the _optimistic flag
+          // Server returned 204 / no body — just confirm the bubble
           setMessages((prev) =>
             prev.map((m) => m.iMessageId === tempId ? { ...m, _optimistic: false } : m)
           );
         }
       } catch {
+        // Remove failed bubble
         setMessages((prev) => prev.filter((m) => m.iMessageId !== tempId));
       } finally {
         pendingTexts.current.delete(trimmed);
@@ -146,5 +144,6 @@ export const useChat = (senderId, receiverId, initialRoomId) => {
     [senderId, receiverId, connection, joinRoom],
   );
 
-  return { messages, loading, sendMessage };
+  // Expose historyLoading as `loading` for backward compat
+  return { messages, loading: historyLoading, sendMessage };
 };

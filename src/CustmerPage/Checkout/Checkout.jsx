@@ -107,7 +107,7 @@ const Checkout = ({ onBack, onSuccess }) => {
         Back to cart
       </button>
 
-      <form onSubmit={handlePlaceOrder} className='grid gap-6 xl:grid-cols-[1fr_360px]'>
+      <form onSubmit={handlePlaceOrder} className='grid gap-6 lg:grid-cols-[1fr_340px]'>
         <div className='space-y-6'>
           <section className='rounded-[32px] border border-[#efdcd2] bg-white p-6 shadow-[0_18px_45px_rgba(94,35,23,0.08)]'>
             <p className='text-xs font-semibold uppercase tracking-[0.24em] text-[#a6806f]'>
@@ -206,7 +206,7 @@ const Checkout = ({ onBack, onSuccess }) => {
           </section>
         </div>
 
-        <aside className='rounded-[32px] border border-[#efdcd2] bg-white p-6 shadow-[0_18px_45px_rgba(94,35,23,0.08)] xl:sticky xl:top-28 xl:h-fit'>
+        <aside className='rounded-[32px] border border-[#efdcd2] bg-white p-6 shadow-[0_18px_45px_rgba(94,35,23,0.08)] lg:sticky lg:top-28 lg:h-fit'>
           <p className='text-xs font-semibold uppercase tracking-[0.24em] text-[#a6806f]'>
             Order summary
           </p>

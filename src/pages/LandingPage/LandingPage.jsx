@@ -60,11 +60,15 @@ function LandingPage() {
 
         {/* Buttons */}
         <div className='flex gap-4 mt-8 flex-wrap justify-center'>
-          <button className='px-6 py-3 bg-red-700 text-white rounded-lg shadow hover:scale-105 transition'>
+          <button
+            onClick={() => navigate('/login')}
+            className='px-6 py-3 bg-red-700 text-white rounded-lg shadow hover:scale-105 transition'>
             Become a Seller
           </button>
 
-          <button className='px-6 py-3 bg-yellow-600 text-white rounded-lg shadow hover:scale-105 transition'>
+          <button
+            onClick={() => navigate('/explore')}
+            className='px-6 py-3 bg-yellow-600 text-white rounded-lg shadow hover:scale-105 transition'>
             Explore Sarees
           </button>
         </div>
@@ -390,10 +394,14 @@ function LandingPage() {
             </p>
 
             <div className='flex flex-col md:flex-row gap-6 justify-center items-center'>
-              <button className='bg-red-700 text-white px-8 py-3 rounded-lg font-semibold hover:bg-red-800 transition-colors w-full md:w-auto'>
+              <button
+                onClick={() => navigate('/register')}
+                className='bg-red-700 text-white px-8 py-3 rounded-lg font-semibold hover:bg-red-800 transition-colors w-full md:w-auto'>
                 Join as Customer
               </button>
-              <button className='bg-orange-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-orange-700 transition-colors w-full md:w-auto'>
+              <button
+                onClick={() => navigate('/login')}
+                className='bg-orange-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-orange-700 transition-colors w-full md:w-auto'>
                 Register as Artisan
               </button>
             </div>

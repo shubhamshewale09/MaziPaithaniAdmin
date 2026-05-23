@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom';
 import { useEffect, useRef, useState } from 'react';
 import { MessageSquare, X } from 'lucide-react';
 import { useChatConnection } from '../../hooks/useChatConnection';
@@ -26,13 +27,28 @@ const formatTime = (dateStr) => {
   }
 };
 
+const moveToTop = (list, roomId) => {
+  const idx = list.findIndex((c) => c.roomId === roomId);
+  if (idx <= 0) return list;
+  const copy = [...list];
+  copy.unshift(copy.splice(idx, 1)[0]);
+  return copy;
+};
+
 const MessageNotificationBell = ({ onOpenEnquiry }) => {
   const connection = useChatConnection();
-  const sellerId = getSellerUserId();
-  const [conversations, setConversations] = useState([]);
-  const [open, setOpen] = useState(false);
-  const popupRef = useRef(null);
+  const sellerId   = getSellerUserId();
 
+  const [conversations, setConversations] = useState([]);
+  const [open, setOpen]   = useState(false);
+  const [pos,  setPos]    = useState({ top: 0, left: 8 });
+
+  const triggerRef  = useRef(null);
+  const panelRef    = useRef(null);
+  // track which roomId is currently open in Enquiries so we don't bump its unread
+  const activeRoomRef = useRef(null);
+
+  /* ── initial load ── */
   useEffect(() => {
     if (!sellerId) return;
     getConversations(sellerId)
@@ -40,56 +56,127 @@ const MessageNotificationBell = ({ onOpenEnquiry }) => {
       .catch(() => {});
   }, [sellerId]);
 
-  // Live updates via SignalR
+  /* ── SignalR: ConversationUpdated ──
+     Backend fires this after a message is saved — carries full conversation
+     snapshot including updated unreadCount and lastMessage.               */
   useEffect(() => {
     if (!connection) return;
-    const handler = (updated) => {
+
+    const handleUpdated = (updated) => {
       setConversations((prev) => {
         const exists = prev.some((c) => c.roomId === updated.roomId);
-        const merged = exists
+        const list = exists
           ? prev.map((c) => (c.roomId === updated.roomId ? { ...c, ...updated } : c))
           : [updated, ...prev];
-        const idx = merged.findIndex((c) => c.roomId === updated.roomId);
-        if (idx > 0) {
-          const reordered = [...merged];
-          const [item] = reordered.splice(idx, 1);
-          reordered.unshift(item);
-          return reordered;
-        }
-        return merged;
+        return moveToTop(list, updated.roomId);
       });
     };
-    connection.on('ConversationUpdated', handler);
-    return () => connection.off('ConversationUpdated', handler);
+
+    connection.on('ConversationUpdated', handleUpdated);
+    return () => connection.off('ConversationUpdated', handleUpdated);
   }, [connection]);
 
-  // Close on outside click
+  /* ── SignalR: ReceiveMessage ──
+     Fallback — fires for every message in any room the seller is connected
+     to. We use it to bump unreadCount + update lastMessage preview so the
+     bell count updates even if ConversationUpdated is delayed or missing.  */
+  useEffect(() => {
+    if (!connection) return;
+
+    const handleMessage = (msg) => {
+      const roomId = msg.iRoomId ?? msg.roomId;
+      if (!roomId) return;
+
+      // Don't increment unread if this is the seller's own message
+      const isOwnMessage = String(msg.iSenderUserId) === String(sellerId);
+      if (isOwnMessage) return;
+
+      setConversations((prev) => {
+        const exists = prev.some((c) => c.roomId === roomId);
+        if (!exists) {
+          // Brand-new conversation — re-fetch to get full details
+          getConversations(sellerId)
+            .then((res) => setConversations(res?.data ?? res ?? []))
+            .catch(() => {});
+          return prev;
+        }
+
+        const updated = prev.map((c) => {
+          if (c.roomId !== roomId) return c;
+          // Only bump unread if this room is NOT currently open
+          const isActive = activeRoomRef.current === roomId;
+          return {
+            ...c,
+            lastMessage:     msg.sMessage,
+            lastMessageTime: msg.dSentDate,
+            unreadCount:     isActive ? (c.unreadCount ?? 0) : (c.unreadCount ?? 0) + 1,
+          };
+        });
+        return moveToTop(updated, roomId);
+      });
+    };
+
+    connection.on('ReceiveMessage', handleMessage);
+    return () => connection.off('ReceiveMessage', handleMessage);
+  }, [connection, sellerId]);
+
+  /* ── calculate portal position when opening ── */
+  const handleToggle = () => {
+    if (!open && triggerRef.current) {
+      const rect    = triggerRef.current.getBoundingClientRect();
+      const vw      = window.innerWidth;
+      const popupW  = Math.min(360, vw - 16);
+      const safeLeft = Math.max(8, rect.right - popupW);
+      setPos({ top: rect.bottom + 8, left: safeLeft });
+    }
+    setOpen((v) => !v);
+  };
+
+  /* ── close on outside click ── */
   useEffect(() => {
     if (!open) return;
     const handler = (e) => {
-      if (popupRef.current && !popupRef.current.contains(e.target)) setOpen(false);
+      if (
+        panelRef.current   && !panelRef.current.contains(e.target) &&
+        triggerRef.current && !triggerRef.current.contains(e.target)
+      ) setOpen(false);
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, [open]);
 
-  const unreadConvs = conversations.filter((c) => (c.unreadCount ?? 0) > 0);
-  const totalUnread = unreadConvs.reduce((sum, c) => sum + (c.unreadCount ?? 0), 0);
+  const totalUnread  = conversations.reduce((s, c) => s + (c.unreadCount ?? 0), 0);
   const displayCount = totalUnread > 99 ? '99+' : totalUnread;
 
   const handleMsgClick = (conv) => {
+    // Mark this room as active so incoming messages don't bump its unread
+    activeRoomRef.current = conv?.roomId ?? null;
+    // Clear unread for this conversation locally
+    if (conv?.roomId) {
+      setConversations((prev) =>
+        prev.map((c) => (c.roomId === conv.roomId ? { ...c, unreadCount: 0 } : c))
+      );
+    }
     setOpen(false);
     onOpenEnquiry(conv);
   };
 
+  const handleViewAll = () => {
+    activeRoomRef.current = null;
+    setOpen(false);
+    onOpenEnquiry(null);
+  };
+
   return (
-    <div className="relative" ref={popupRef}>
-      {/* Bell button */}
+    <>
+      {/* ── trigger button ── */}
       <button
+        ref={triggerRef}
         type="button"
-        onClick={() => setOpen((v) => !v)}
+        onClick={handleToggle}
         className="relative flex h-9 w-9 items-center justify-center rounded-xl border border-[#eee2db] bg-white text-[#6a1825] transition hover:-translate-y-0.5 hover:bg-[#fff8f3] sm:h-11 sm:w-11 sm:rounded-2xl"
         aria-label="Messages"
+        aria-expanded={open}
       >
         <MessageSquare size={16} className="sm:h-[18px] sm:w-[18px]" />
         {totalUnread > 0 && (
@@ -99,10 +186,20 @@ const MessageNotificationBell = ({ onOpenEnquiry }) => {
         )}
       </button>
 
-      {/* Popup */}
-      {open && (
-        <div className="absolute right-0 top-[calc(100%+10px)] z-50 w-[320px] rounded-[20px] border border-[#f1e2d8] bg-white shadow-[0_20px_60px_rgba(122,30,44,0.15)] sm:w-[360px]">
-          {/* Header */}
+      {/* ── portal popup ── */}
+      {open && createPortal(
+        <div
+          ref={panelRef}
+          style={{
+            position: 'fixed',
+            top:  pos.top,
+            left: pos.left,
+            zIndex: 9999,
+            width: Math.min(360, window.innerWidth - 16),
+          }}
+          className="rounded-[20px] border border-[#f1e2d8] bg-white shadow-[0_20px_60px_rgba(122,30,44,0.18)]"
+        >
+          {/* header */}
           <div className="flex items-center justify-between border-b border-[#f1e2d8] px-4 py-3">
             <div className="flex items-center gap-2">
               <MessageSquare size={15} className="text-[#7a1e2c]" />
@@ -122,7 +219,7 @@ const MessageNotificationBell = ({ onOpenEnquiry }) => {
             </button>
           </div>
 
-          {/* List */}
+          {/* list */}
           <div className="max-h-[340px] overflow-y-auto [scrollbar-width:thin]">
             {conversations.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-10 text-center">
@@ -132,7 +229,7 @@ const MessageNotificationBell = ({ onOpenEnquiry }) => {
               </div>
             ) : (
               conversations.slice(0, 10).map((conv, i) => {
-                const name = conv.otherUserName ?? 'Customer';
+                const name      = conv.otherUserName ?? 'Customer';
                 const hasUnread = (conv.unreadCount ?? 0) > 0;
                 return (
                   <button
@@ -141,7 +238,6 @@ const MessageNotificationBell = ({ onOpenEnquiry }) => {
                     onClick={() => handleMsgClick(conv)}
                     className="flex w-full items-start gap-3 border-b border-[#fdf0ea] px-4 py-3 text-left transition hover:bg-[#fffaf6] last:border-0"
                   >
-                    {/* Avatar */}
                     <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#7a1e2c] to-[#c28b1e] text-sm font-bold text-white">
                       {name[0]}
                     </div>
@@ -154,7 +250,7 @@ const MessageNotificationBell = ({ onOpenEnquiry }) => {
                           {formatTime(conv.lastMessageTime)}
                         </span>
                       </div>
-                      <p className="mt-0.5 truncate text-xs text-[#8b6759]">
+                      <p className={`mt-0.5 truncate text-xs ${hasUnread ? 'font-semibold text-[#7a1e2c]' : 'text-[#8b6759]'}`}>
                         {conv.lastMessage ?? 'New enquiry'}
                       </p>
                     </div>
@@ -169,19 +265,20 @@ const MessageNotificationBell = ({ onOpenEnquiry }) => {
             )}
           </div>
 
-          {/* Footer */}
+          {/* footer */}
           <div className="border-t border-[#f1e2d8] px-4 py-3">
             <button
               type="button"
-              onClick={() => { setOpen(false); onOpenEnquiry(null); }}
+              onClick={handleViewAll}
               className="w-full rounded-[12px] bg-[#7a1e2c] py-2 text-xs font-bold text-white transition hover:bg-[#651623]"
             >
               View All Enquiries
             </button>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
-    </div>
+    </>
   );
 };
 

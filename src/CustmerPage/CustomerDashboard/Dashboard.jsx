@@ -336,24 +336,24 @@ const AllProductsGrid = ({ products, onOpen, onAddToCart, onChatSeller, onToggle
 
 // ── Hero banner ───────────────────────────────────────────────────────────────
 const HeroBanner = ({ onShop, onCustom, totalProducts }) => (
-  <section className='relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#4a0e1c] via-[#7a1e2c] to-[#3d0f1a] px-6 py-8 text-white shadow-xl sm:px-10 sm:py-12'>
+  <section className='relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#4a0e1c] via-[#7a1e2c] to-[#3d0f1a] px-5 py-6 text-white shadow-xl sm:px-10 sm:py-12'>
     <div className='absolute -right-16 -top-16 h-64 w-64 rounded-full bg-[#f5d47c]/10 blur-3xl pointer-events-none' />
     <div className='absolute -bottom-10 -left-10 h-48 w-48 rounded-full bg-white/5 blur-3xl pointer-events-none' />
     <div className='relative max-w-2xl'>
-      <div className='inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-widest text-[#f5d47c] backdrop-blur-sm mb-4'>
+      <div className='inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-widest text-[#f5d47c] backdrop-blur-sm mb-3'>
         <Sparkles size={11} /> Handcrafted Paithani Sarees
       </div>
-      <h1 className='font-serif text-3xl font-bold leading-tight sm:text-4xl lg:text-5xl'>
+      <h1 className='font-serif text-2xl font-bold leading-tight sm:text-4xl lg:text-5xl'>
         Discover authentic <span className='text-[#f5d47c]'>Paithani sarees</span> from master weavers.
       </h1>
-      <p className='mt-4 text-sm leading-7 text-white/70 max-w-lg'>
+      <p className='mt-3 text-sm leading-6 text-white/70 max-w-lg'>
         Browse {totalProducts}+ handcrafted sarees directly from artisans. Real images, real stock, real prices.
       </p>
-      <div className='mt-6 flex flex-wrap gap-3'>
-        <button type='button' onClick={onShop} className='inline-flex items-center gap-2 rounded-full bg-[#f5d47c] px-6 py-3 text-sm font-bold text-[#3d0f1a] transition hover:bg-[#f0ca60] active:scale-95'>
+      <div className='mt-5 flex flex-wrap gap-3'>
+        <button type='button' onClick={onShop} className='inline-flex items-center gap-2 rounded-full bg-[#f5d47c] px-5 py-2.5 text-sm font-bold text-[#3d0f1a] transition hover:bg-[#f0ca60] active:scale-95'>
           <ShoppingCart size={15} /> Shop Now
         </button>
-        <button type='button' onClick={onCustom} className='inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-6 py-3 text-sm font-semibold text-white backdrop-blur-sm transition hover:bg-white/15'>
+        <button type='button' onClick={onCustom} className='inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-5 py-2.5 text-sm font-semibold text-white backdrop-blur-sm transition hover:bg-white/15'>
           Custom Design <ArrowRight size={14} />
         </button>
       </div>
@@ -477,7 +477,10 @@ const HomeTab = ({ products, onBrowseCollection, onOpenProduct, onCustomRequest,
 
   return (
     <div className='space-y-5'>
-      {/* Two-column layout wraps everything below the hero */}
+      {/* Hero spans full width above the two-column layout */}
+      <HeroBanner onShop={onBrowseCollection} onCustom={onCustomRequest} totalProducts={products.length} />
+
+      {/* Two-column layout for filter + content */}
       <div className='grid gap-5 lg:grid-cols-[260px_1fr]'>
 
         {/* ── Left: filter sidebar (desktop) ── */}
@@ -489,7 +492,6 @@ const HomeTab = ({ products, onBrowseCollection, onOpenProduct, onCustomRequest,
 
         {/* ── Right: all content ── */}
         <div className='min-w-0 space-y-5'>
-          <HeroBanner onShop={onBrowseCollection} onCustom={onCustomRequest} totalProducts={products.length} />
 
           {products.length > 0 && (
             <div className='grid grid-cols-2 gap-3 sm:grid-cols-4'>
@@ -499,9 +501,9 @@ const HomeTab = ({ products, onBrowseCollection, onOpenProduct, onCustomRequest,
                 { label: 'Out of Stock',   value: outOfStock.length, color: 'bg-[#fef2f2] text-red-600' },
                 { label: 'Customizable',   value: customizable.length, color: 'bg-[#fffbeb] text-amber-700' },
               ].map((s) => (
-                <div key={s.label} className={`rounded-xl p-4 ${s.color} border border-current/10`}>
-                  <p className='text-2xl font-extrabold'>{s.value}</p>
-                  <p className='text-xs font-semibold mt-0.5 opacity-80'>{s.label}</p>
+                <div key={s.label} className={`rounded-xl p-3 sm:p-4 ${s.color} border border-current/10`}>
+                  <p className='text-xl sm:text-2xl font-extrabold'>{s.value}</p>
+                  <p className='text-[10px] sm:text-xs font-semibold mt-0.5 opacity-80 leading-tight'>{s.label}</p>
                 </div>
               ))}
             </div>
@@ -565,7 +567,7 @@ const HomeTab = ({ products, onBrowseCollection, onOpenProduct, onCustomRequest,
 };
 
 // ── Main CustomerDashboard ────────────────────────────────────────────────────
-const CustomerDashboard = () => {
+const CustomerDashboard = ({ guestMode = false }) => {
   const { logout } = useAuth();
   const navigate = useNavigate();
   const connection = useChatConnection();
@@ -584,7 +586,9 @@ const CustomerDashboard = () => {
   const [wishlistItems, setWishlistItems] = useState([]);
   const [cartItemIds, setCartItemIds] = useState([]);
   const [wishlistLoaded, setWishlistLoaded] = useState(false);
-  const [wishlistConfirm, setWishlistConfirm] = useState(null); // { type: 'add'|'remove', item }
+  const [wishlistConfirm, setWishlistConfirm] = useState(null);
+  // guest login modal
+  const [showLoginModal, setShowLoginModal] = useState(false);
 
   const productsFetched = useRef(false);
 
@@ -598,9 +602,27 @@ const CustomerDashboard = () => {
 
   useEffect(() => {
     if (!connection) return;
-    const handler = () => setUnreadCount((prev) => prev + 1);
-    connection.on('NewMessageNotification', handler);
-    return () => connection.off('NewMessageNotification', handler);
+
+    const customerId = getUserId();
+
+    // NewMessageNotification — fired by backend specifically for the recipient
+    const handleNotification = () => setUnreadCount((prev) => prev + 1);
+    connection.on('NewMessageNotification', handleNotification);
+
+    // ReceiveMessage — fallback: fires for every message in rooms the user joined.
+    // Only count messages NOT sent by this user and only when NOT on messages tab.
+    const handleReceive = (msg) => {
+      const isOwnMessage = String(msg.iSenderUserId) === String(customerId);
+      if (isOwnMessage) return;
+      // activeTab is captured in closure — use functional update to avoid stale ref
+      setUnreadCount((prev) => prev + 1);
+    };
+    connection.on('ReceiveMessage', handleReceive);
+
+    return () => {
+      connection.off('NewMessageNotification', handleNotification);
+      connection.off('ReceiveMessage', handleReceive);
+    };
   }, [connection]);
 
   useEffect(() => {
@@ -621,12 +643,14 @@ const CustomerDashboard = () => {
 
   const handleViewDetail = (product) => { setPreviousTab(activeTab); setSelectedProduct(product); setActiveTab('product-detail'); };
   const handleAddToCart = (product) => {
+    if (guestMode) { setShowLoginModal(true); return; }
     setCartCount((c) => c + 1);
     if (product?.id) setCartItemIds((prev) => [...new Set([...prev, product.id])]);
     setActiveTab('cart');
   };
 
   const handleToggleWishlist = (item) => {
+    if (guestMode) { setShowLoginModal(true); return; }
     const alreadyWished = wishlistItems.find((p) => p.id === item.id);
     setWishlistConfirm({ type: alreadyWished ? 'remove' : 'add', item });
   };
@@ -671,9 +695,20 @@ const CustomerDashboard = () => {
 
   // Called from product card Chat button — passes sellerUserId + sellerName
   const handleChatSeller = ({ sellerId, sellerName }) => {
+    if (guestMode) { setShowLoginModal(true); return; }
     setChatTarget({ sellerId, sellerName });
     setActiveTab('messages');
     setUnreadCount(0);
+  };
+
+  // Intercept tab changes for guest mode — protected tabs require login
+  const PROTECTED_TABS = new Set(['cart', 'checkout', 'messages', 'wishlist', 'orders', 'profile', 'custom']);
+  const handleTabChange = (tab) => {
+    if (guestMode && PROTECTED_TABS.has(tab)) {
+      setShowLoginModal(true);
+      return;
+    }
+    setActiveTab(tab);
   };
 
   const customerTitle = useMemo(() => {
@@ -781,14 +816,86 @@ const CustomerDashboard = () => {
         onConfirm={confirmWishlistAction}
         onClose={() => setWishlistConfirm(null)}
       />
+
+      {/* ── Guest login modal ── */}
+      {showLoginModal && (
+        <div className='fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 px-4 backdrop-blur-sm'>
+          <div className='w-full max-w-sm overflow-hidden rounded-3xl bg-white shadow-2xl'>
+            {/* header */}
+            <div className='bg-gradient-to-br from-[#7a1e2c] to-[#c28b1e] px-6 py-8 text-center text-white'>
+              <div className='mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-2xl bg-white/20 text-2xl font-bold'>
+                MP
+              </div>
+              <h2 className='font-serif text-2xl font-bold'>माझी पैठणी</h2>
+              <p className='mt-1 text-sm text-white/80'>Sign in to continue</p>
+            </div>
+
+            {/* body */}
+            <div className='px-6 py-6'>
+              <p className='text-center text-sm text-[#6b5048]'>
+                Please login or create an account to use cart, messages, wishlist and more.
+              </p>
+
+              <div className='mt-5 space-y-3'>
+                <button
+                  type='button'
+                  onClick={() => navigate('/login')}
+                  className='w-full rounded-2xl bg-[#7a1e2c] py-3 text-sm font-bold text-white transition hover:bg-[#651623]'
+                >
+                  Login to your account
+                </button>
+                <button
+                  type='button'
+                  onClick={() => navigate('/register')}
+                  className='w-full rounded-2xl border border-[#ead9cf] py-3 text-sm font-semibold text-[#7a1e2c] transition hover:bg-[#fff1e7]'
+                >
+                  Create new account
+                </button>
+                <button
+                  type='button'
+                  onClick={() => setShowLoginModal(false)}
+                  className='w-full py-2 text-xs text-[#9b7b69] transition hover:text-[#7a1e2c]'
+                >
+                  Continue browsing
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <CustomerLayout
         activeTab={activeTab}
-        setActiveTab={setActiveTab}
+        setActiveTab={handleTabChange}
         cartCount={cartCount}
         unreadCount={unreadCount}
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
       >
+        {/* guest banner */}
+        {guestMode && (
+          <div className='mb-4 flex items-center justify-between gap-3 rounded-2xl bg-gradient-to-r from-[#7a1e2c] to-[#c28b1e] px-4 py-3 text-white shadow-md'>
+            <p className='text-sm font-semibold'>
+              You're browsing as a guest. Login to shop, save items & chat with artisans.
+            </p>
+            <div className='flex shrink-0 gap-2'>
+              <button
+                type='button'
+                onClick={() => navigate('/login')}
+                className='rounded-full bg-white px-4 py-1.5 text-xs font-bold text-[#7a1e2c] transition hover:bg-[#fff4dc]'
+              >
+                Login
+              </button>
+              <button
+                type='button'
+                onClick={() => navigate('/register')}
+                className='rounded-full border border-white/40 px-4 py-1.5 text-xs font-bold text-white transition hover:bg-white/10'
+              >
+                Register
+              </button>
+            </div>
+          </div>
+        )}
         {renderContent()}
       </CustomerLayout>
     </>

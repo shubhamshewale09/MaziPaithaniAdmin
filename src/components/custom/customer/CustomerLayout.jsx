@@ -24,6 +24,15 @@ export const NAV_LINKS = [
   { id: 'profile', label: 'Profile', icon: User },
 ];
 
+// Bottom nav shows only 5 primary items; rest accessible via hamburger menu
+const BOTTOM_NAV = [
+  { id: 'home', label: 'Home', icon: Home },
+  { id: 'categories', label: 'Shop', icon: Grid2X2 },
+  { id: 'cart', label: 'Cart', icon: ShoppingCart },
+  { id: 'orders', label: 'Orders', icon: Package },
+  { id: 'profile', label: 'Profile', icon: User },
+];
+
 const quickFilters = ['Bridal', 'Pure Silk', 'Under 20k', 'Ready to Ship'];
 const iconTooltipClassName =
   'pointer-events-none absolute -top-12 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-2xl border border-[#f2d7c5] bg-gradient-to-br from-[#fffaf6] via-[#fff4ec] to-[#fde7d7] px-3 py-1.5 text-[11px] font-semibold text-[#7a1e2c] opacity-0 shadow-[0_12px_30px_rgba(94,35,23,0.16)] transition duration-200 group-hover:-translate-y-1 group-hover:opacity-100';
@@ -123,9 +132,9 @@ const CustomerLayout = ({
           </div>
         </div>
 
-        <div className='border-t border-[#f1e4dc] px-4 py-3 lg:hidden'>
-          <div className='mx-auto max-w-7xl space-y-3'>
-            <div className='flex items-center gap-3 rounded-full border border-[#ead9cf] bg-white px-4 py-3 shadow-sm'>
+        <div className='border-t border-[#f1e4dc] px-4 py-2 lg:hidden'>
+          <div className='mx-auto max-w-7xl space-y-2'>
+            <div className='flex items-center gap-3 rounded-full border border-[#ead9cf] bg-white px-4 py-2.5 shadow-sm'>
               <Search size={16} className='text-[#9b7b69]' />
               <input
                 type='text'
@@ -141,7 +150,7 @@ const CustomerLayout = ({
                 <button
                   key={item}
                   type='button'
-                  className='shrink-0 rounded-full border border-[#ead9cf] bg-white px-3 py-2 text-xs font-semibold text-[#8b6759] transition hover:border-[#7a1e2c] hover:text-[#7a1e2c]'
+                  className='shrink-0 rounded-full border border-[#ead9cf] bg-white px-3 py-1.5 text-xs font-semibold text-[#8b6759] transition hover:border-[#7a1e2c] hover:text-[#7a1e2c]'
                 >
                   {item}
                 </button>
@@ -243,13 +252,14 @@ const CustomerLayout = ({
         )}
       </header>
 
-      <main className='px-4 pt-5 pb-24 sm:px-6 lg:px-8 lg:pb-8'>
+      <main className='px-3 pt-4 pb-28 sm:px-6 lg:px-8 lg:pb-8'>
         <div className='mx-auto max-w-7xl'>{children}</div>
       </main>
 
-      <nav className='fixed bottom-0 left-0 right-0 z-40 border-t border-[#ead9cf] bg-[#fffaf6]/95 px-2 py-2 backdrop-blur-xl lg:hidden'>
-        <div className='flex items-center justify-between gap-1'>
-          {NAV_LINKS.map((item) => {
+      {/* Bottom nav — 5 primary items only */}
+      <nav className='fixed bottom-0 left-0 right-0 z-40 border-t border-[#ead9cf] bg-[#fffaf6]/95 backdrop-blur-xl lg:hidden'>
+        <div className='flex items-center justify-around px-1 py-2'>
+          {BOTTOM_NAV.map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
             const showBadge = item.id === 'messages' && unreadCount > 0;
@@ -259,17 +269,22 @@ const CustomerLayout = ({
                 key={item.id}
                 type='button'
                 onClick={() => handleTabChange(item.id)}
-                className='flex flex-1 flex-col items-center gap-1 rounded-2xl px-2 py-2 text-center'
+                className='flex flex-1 flex-col items-center gap-0.5 py-2'
               >
                 <span
                   className={[
-                    'relative flex h-9 w-9 items-center justify-center rounded-2xl transition',
+                    'relative flex h-9 w-9 items-center justify-center rounded-xl transition',
                     isActive
                       ? 'bg-[#7a1e2c] text-white shadow-md shadow-[#7a1e2c]/20'
-                      : 'bg-transparent text-[#9b7b69]',
+                      : 'text-[#9b7b69]',
                   ].join(' ')}
                 >
-                  <Icon size={17} />
+                  <Icon size={18} />
+                  {item.id === 'cart' && cartCount > 0 && (
+                    <span className='absolute -right-1 -top-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-[#7a1e2c] px-0.5 text-[9px] font-bold text-white'>
+                      {cartCount}
+                    </span>
+                  )}
                   {showBadge && (
                     <span className='absolute -right-1 -top-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-[#c28b1e] px-0.5 text-[9px] font-bold text-white'>
                       {unreadCount}
@@ -278,7 +293,7 @@ const CustomerLayout = ({
                 </span>
                 <span
                   className={[
-                    'text-[10px] font-semibold',
+                    'text-[9px] font-semibold',
                     isActive ? 'text-[#7a1e2c]' : 'text-[#9b7b69]',
                   ].join(' ')}
                 >

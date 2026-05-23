@@ -114,56 +114,88 @@ const ChatBubble = ({ msg, isMe, senderName }) => (
 const ChatPanel = ({ sellerId, conv, onBack }) => {
   const connection = useChatConnection();
   const [messages, setMessages] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [historyLoading, setHistoryLoading] = useState(true);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const bottomRef = useRef(null);
   const inputRef = useRef(null);
+  const pendingTexts = useRef(new Set());
   const name = conv.otherUserName ?? 'Customer';
 
-  /* load history */
+  /* load history in background — input is available immediately */
   useEffect(() => {
-    setLoading(true);
+    setHistoryLoading(true);
     setMessages([]);
     getChatHistory(sellerId, conv.otherUserId, conv.roomId)
       .then((res) => setMessages(res?.messages ?? []))
       .catch(() => {})
-      .finally(() => setLoading(false));
+      .finally(() => setHistoryLoading(false));
   }, [conv.roomId, sellerId, conv.otherUserId]);
 
   /* SignalR room */
   useEffect(() => {
     if (!connection || !conv.roomId) return;
     connection.invoke('JoinRoom', conv.roomId).catch(() => {});
-    const onMsg = (msg) => setMessages((p) => [...p, msg]);
+    const onMsg = (msg) => {
+      // suppress echo of own optimistic messages
+      if (String(msg.iSenderUserId) === String(sellerId) && pendingTexts.current.has(msg.sMessage)) {
+        return;
+      }
+      setMessages((p) => [...p, msg]);
+    };
     connection.on('ReceiveMessage', onMsg);
     return () => {
       connection.off('ReceiveMessage', onMsg);
       connection.invoke('LeaveRoom', conv.roomId).catch(() => {});
     };
-  }, [connection, conv.roomId]);
+  }, [connection, conv.roomId, sellerId]);
 
-  /* scroll to bottom */
+  /* scroll to bottom whenever messages change */
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  /* focus input */
+  /* focus input on conversation change */
   useEffect(() => { inputRef.current?.focus(); }, [conv.roomId]);
 
   const handleSend = useCallback(async () => {
     const text = input.trim();
     if (!text || sending) return;
     setInput('');
+
+    const tempId = `opt-${Date.now()}`;
+    pendingTexts.current.add(text);
+
+    /* optimistic bubble — appears instantly */
+    setMessages((p) => [...p, {
+      iMessageId:      tempId,
+      iSenderUserId:   sellerId,
+      iReceiverUserId: conv.otherUserId,
+      sMessage:        text,
+      dSentDate:       new Date().toISOString(),
+      _optimistic:     true,
+    }]);
+
     setSending(true);
     try {
-      await sendChatMessage({
-        senderId: Number(sellerId),
+      const res = await sendChatMessage({
+        senderId:   Number(sellerId),
         receiverId: Number(conv.otherUserId),
-        message: text,
+        message:    text,
       });
-    } catch { /* global handler */ }
-    finally { setSending(false); }
+      /* replace optimistic with real message if server returns one */
+      if (res?.message) {
+        setMessages((p) => p.map((m) => m.iMessageId === tempId ? { ...res.message } : m));
+      } else {
+        setMessages((p) => p.map((m) => m.iMessageId === tempId ? { ...m, _optimistic: false } : m));
+      }
+    } catch {
+      /* remove failed optimistic bubble */
+      setMessages((p) => p.filter((m) => m.iMessageId !== tempId));
+    } finally {
+      pendingTexts.current.delete(text);
+      setSending(false);
+    }
   }, [input, sending, sellerId, conv.otherUserId]);
 
   return (
@@ -171,7 +203,6 @@ const ChatPanel = ({ sellerId, conv, onBack }) => {
 
       {/* ── Chat Header ── */}
       <div className="flex shrink-0 items-center gap-3 border-b border-[#f0e4de] bg-white px-5 py-3.5">
-        {/* back (mobile) */}
         <button
           type="button"
           onClick={onBack}
@@ -189,13 +220,16 @@ const ChatPanel = ({ sellerId, conv, onBack }) => {
             <span className="text-[11px] text-[#8b6759]">Online · Room #{conv.roomId}</span>
           </div>
         </div>
+        {historyLoading && (
+          <div className='h-1 w-16 overflow-hidden rounded-full bg-[#f0e4de]'>
+            <div className='h-full w-1/2 rounded-full bg-[#7a1e2c]' style={{ animation: 'slide 1s ease-in-out infinite' }} />
+          </div>
+        )}
       </div>
 
-      {/* ── Messages ── */}
+      {/* ── Messages area ── */}
       <div className="flex-1 overflow-y-auto bg-[#fdf8f5] px-5 py-4 [scrollbar-width:thin]">
-        {loading ? (
-          <div className="flex h-full items-center justify-center"><Loader /></div>
-        ) : messages.length === 0 ? (
+        {messages.length === 0 && !historyLoading ? (
           <div className="flex h-full flex-col items-center justify-center text-center">
             <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#fff0e8]">
               <MessageSquare size={26} className="text-[#7a1e2c]" />
@@ -267,9 +301,19 @@ const Enquiries = ({ initConv, onInitConvConsumed }) => {
   const [activeConv, setActiveConv] = useState(null);
   const [mobileShowChat, setMobileShowChat] = useState(false);
 
+  // track the currently open roomId so incoming messages don't bump its unread
+  const activeRoomRef = useRef(null);
+
   /* consume initConv from bell click */
   useEffect(() => {
     if (!initConv) return;
+    // clear unread for the conversation being opened
+    if (initConv.roomId) {
+      activeRoomRef.current = initConv.roomId;
+      setConversations((prev) =>
+        prev.map((c) => (c.roomId === initConv.roomId ? { ...c, unreadCount: 0 } : c))
+      );
+    }
     setActiveConv(initConv);
     setMobileShowChat(true);
     onInitConvConsumed?.();
@@ -285,14 +329,22 @@ const Enquiries = ({ initConv, onInitConvConsumed }) => {
       .finally(() => setLoading(false));
   }, [sellerId]);
 
-  /* live SignalR updates */
+  /* ── SignalR: ConversationUpdated ──
+     Backend fires this after a message is saved with full snapshot.        */
   useEffect(() => {
     if (!connection) return;
     const handler = (updated) => {
       setConversations((prev) => {
         const exists = prev.some((c) => c.roomId === updated.roomId);
         const list = exists
-          ? prev.map((c) => (c.roomId === updated.roomId ? { ...c, ...updated } : c))
+          ? prev.map((c) => {
+              if (c.roomId !== updated.roomId) return c;
+              // If this room is currently open, keep unread at 0
+              const unreadCount = activeRoomRef.current === updated.roomId
+                ? 0
+                : (updated.unreadCount ?? c.unreadCount ?? 0);
+              return { ...c, ...updated, unreadCount };
+            })
           : [updated, ...prev];
         const idx = list.findIndex((c) => c.roomId === updated.roomId);
         if (idx > 0) {
@@ -307,6 +359,51 @@ const Enquiries = ({ initConv, onInitConvConsumed }) => {
     return () => connection.off('ConversationUpdated', handler);
   }, [connection]);
 
+  /* ── SignalR: ReceiveMessage ──
+     Fallback for when ConversationUpdated is delayed or missing.
+     Updates last message preview and bumps unread for non-active rooms.   */
+  useEffect(() => {
+    if (!connection) return;
+    const handler = (msg) => {
+      const roomId = msg.iRoomId ?? msg.roomId;
+      if (!roomId) return;
+
+      // Don't process seller's own outgoing messages
+      if (String(msg.iSenderUserId) === String(sellerId)) return;
+
+      setConversations((prev) => {
+        const exists = prev.some((c) => c.roomId === roomId);
+        if (!exists) {
+          // New conversation — re-fetch
+          getConversations(sellerId)
+            .then((res) => setConversations(res?.data ?? res ?? []))
+            .catch(() => {});
+          return prev;
+        }
+        const isActive = activeRoomRef.current === roomId;
+        const updated = prev.map((c) => {
+          if (c.roomId !== roomId) return c;
+          return {
+            ...c,
+            lastMessage:     msg.sMessage,
+            lastMessageTime: msg.dSentDate,
+            unreadCount:     isActive ? 0 : (c.unreadCount ?? 0) + 1,
+          };
+        });
+        // move to top
+        const idx = updated.findIndex((c) => c.roomId === roomId);
+        if (idx > 0) {
+          const copy = [...updated];
+          copy.unshift(copy.splice(idx, 1)[0]);
+          return copy;
+        }
+        return updated;
+      });
+    };
+    connection.on('ReceiveMessage', handler);
+    return () => connection.off('ReceiveMessage', handler);
+  }, [connection, sellerId]);
+
   const filtered = conversations.filter((c) =>
     `${c.otherUserName ?? ''} ${c.lastMessage ?? ''}`.toLowerCase().includes(query.toLowerCase())
   );
@@ -314,6 +411,13 @@ const Enquiries = ({ initConv, onInitConvConsumed }) => {
   const totalUnread = conversations.reduce((s, c) => s + (c.unreadCount ?? 0), 0);
 
   const selectConv = (conv) => {
+    // mark as active and clear its unread immediately
+    activeRoomRef.current = conv.roomId ?? null;
+    if (conv.roomId) {
+      setConversations((prev) =>
+        prev.map((c) => (c.roomId === conv.roomId ? { ...c, unreadCount: 0 } : c))
+      );
+    }
     setActiveConv(conv);
     setMobileShowChat(true);
   };

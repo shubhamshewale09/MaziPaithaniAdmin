@@ -461,20 +461,20 @@ const Profile = () => {
   return (
     <>
       <MetaTitle title='Profile' />
-      <div className='p-6 bg-gray-50 min-h-full'>
+      <div className='p-4 sm:p-6 bg-gray-50 min-h-full'>
         {/* Page Header */}
-        <div className='mb-8'>
-          <h1 className='text-2xl font-bold text-gray-800 mb-1'>
+        <div className='mb-6 sm:mb-8'>
+          <h1 className='text-xl sm:text-2xl font-bold text-gray-800 mb-1'>
             Seller Profile
           </h1>
-          <p className='text-gray-600'>
+          <p className='text-sm text-gray-600'>
             Manage your shop and account information
           </p>
         </div>
 
         {/* Profile Card */}
-        <div className='bg-gradient-to-br from-[#f8f9fa] to-[#e9ecef] rounded-2xl shadow-lg p-8 mb-8 border border-[#dee2e6]'>
-          <div className='flex items-start gap-6'>
+        <div className='bg-gradient-to-br from-[#f8f9fa] to-[#e9ecef] rounded-2xl shadow-lg p-5 sm:p-8 mb-6 sm:mb-8 border border-[#dee2e6]'>
+          <div className='flex flex-col items-center gap-4 sm:flex-row sm:items-start sm:gap-6'>
             {/* Profile Circle with Progress */}
             <div className='relative'>
               <div className='w-24 h-24 rounded-full bg-gradient-to-br from-[#9b59b6] to-[#e74c3c] flex items-center justify-center text-white text-2xl font-bold shadow-lg'>
@@ -515,8 +515,8 @@ const Profile = () => {
             </div>
 
             {/* User Info */}
-            <div className='flex-1 pt-6'>
-              <h2 className='text-xl font-bold text-gray-800 mb-1'>
+            <div className='flex-1 pt-0 sm:pt-6 text-center sm:text-left'>
+              <h2 className='text-lg sm:text-xl font-bold text-gray-800 mb-1'>
                 {userData?.sFirstName && userData?.sLastName
                   ? `${userData.sFirstName} ${userData.sLastName}`
                   : getUserData().name}
@@ -623,9 +623,8 @@ const Profile = () => {
 
         {/* Form Section */}
         {progress === 100 && !isEditMode ? (
-          <div className='bg-white rounded-xl shadow-sm border border-gray-100 p-6'>
-            <div className='flex items-start gap-8 py-8'>
-              <div className='flex-1'>
+          <div className='bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6'>
+            <div className='py-4 sm:py-8'>
                 <div className='bg-green-50 border border-green-200 rounded-lg p-4 mb-6'>
                   <div className='flex items-center gap-3'>
                     <div className='w-10 h-10 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0'>
@@ -679,7 +678,7 @@ const Profile = () => {
                         });
                       }
                     }}
-                    className='px-6 py-2 bg-gradient-to-r from-[#9b59b6] to-[#e74c3c] text-white rounded-lg shadow-md hover:shadow-lg transition-all duration-200 flex items-center gap-2 text-sm font-medium'
+                    className='w-full sm:w-auto px-6 py-2 bg-gradient-to-r from-[#9b59b6] to-[#e74c3c] text-white rounded-lg shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-2 text-sm font-medium'
                   >
                     <svg
                       className='w-4 h-4'
@@ -698,8 +697,8 @@ const Profile = () => {
                   </button>
                 </div>
 
-                <div className='bg-gray-50 rounded-lg p-6'>
-                  <div className='grid grid-cols-2 gap-x-8 gap-y-4'>
+                <div className='bg-gray-50 rounded-lg p-4 sm:p-6'>
+                  <div className='grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-x-8 sm:gap-y-4'>
                     <div>
                       <span className='text-sm text-gray-500 block mb-1'>
                         Name:
@@ -827,11 +826,10 @@ const Profile = () => {
                     </div>
                   </div>
                 </div>
-              </div>
             </div>
           </div>
         ) : (
-          <div className='bg-gradient-to-br from-white to-[#f8f9fa] rounded-xl shadow-md border border-[#dee2e6] p-6'>
+          <div className='bg-gradient-to-br from-white to-[#f8f9fa] rounded-xl shadow-md border border-[#dee2e6] p-4 sm:p-6'>
             {activeTab === 'shopInfo' && (
               <>
                 <div className='mb-6'>
@@ -1107,11 +1105,11 @@ const Profile = () => {
             )}
 
             {/* Action Buttons */}
-            <div className='flex justify-end gap-3 mt-8 pt-6 border-t border-[#dee2e6]'>
+            <div className='flex flex-col-reverse gap-3 mt-8 pt-6 border-t border-[#dee2e6] sm:flex-row sm:justify-end'>
               {isEditMode && (
                 <button
                   onClick={handleCancel}
-                  className='px-6 py-3 border border-[#dee2e6] text-[#6c757d] rounded-lg hover:bg-[#f8f9fa] transition-colors duration-200 font-medium'
+                  className='w-full sm:w-auto px-6 py-3 border border-[#dee2e6] text-[#6c757d] rounded-lg hover:bg-[#f8f9fa] transition-colors duration-200 font-medium'
                 >
                   Cancel
                 </button>
@@ -1119,7 +1117,7 @@ const Profile = () => {
               <button
                 onClick={handleSave}
                 disabled={loading}
-                className='px-6 py-3 bg-gradient-to-r from-[#9b59b6] to-[#e74c3c] text-white rounded-lg hover:from-[#8e44ad] hover:to-[#c0392b] transition-all duration-200 font-medium shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2'
+                className='w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-[#9b59b6] to-[#e74c3c] text-white rounded-lg hover:from-[#8e44ad] hover:to-[#c0392b] transition-all duration-200 font-medium shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2'
               >
                 {loading ? (
                   <>

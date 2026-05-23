@@ -303,6 +303,7 @@ const Dashboard = () => {
           showLogoutButton={false}
           onLogout={() => setIsLogoutModalOpen(true)}
           onOpenEnquiry={handleOpenEnquiry}
+          onOpenProfile={() => setActiveTab('profile')}
         />
 
         <Sidebar

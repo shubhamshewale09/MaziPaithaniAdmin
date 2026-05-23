@@ -77,7 +77,7 @@ const ProductDetail = ({ product, onBack, onAddToCart, onBuyNow, onCustomRequest
 
         {/* ── Image gallery ── */}
         <div className='space-y-3'>
-          <div className='relative overflow-hidden rounded-[28px] border border-[#efdcd2] bg-[#faf7f5] shadow-sm' style={{ aspectRatio: '4/5' }}>
+          <div className='relative overflow-hidden rounded-[28px] border border-[#efdcd2] bg-[#faf7f5] shadow-sm' style={{ aspectRatio: '1/1' }}>
             {hasImages ? (
               <img
                 src={images[activeImage]}

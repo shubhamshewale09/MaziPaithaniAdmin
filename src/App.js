@@ -98,6 +98,8 @@ function App() {
                   </PrivateRoute>
                 }
               />
+              {/* Guest explore — no auth required, protected actions show login modal */}
+              <Route path='/explore' element={<CustomerDashboard guestMode />} />
               <Route
                 path='*'
                 element={<Navigate to={getDefaultDashboardRoute()} replace />}

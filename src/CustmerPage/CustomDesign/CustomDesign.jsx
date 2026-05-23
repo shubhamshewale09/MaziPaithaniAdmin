@@ -102,7 +102,7 @@ const CustomDesign = () => {
         </div>
       </section>
 
-      <form onSubmit={handleSubmit} className='grid gap-6 xl:grid-cols-[1fr_340px]'>
+      <form onSubmit={handleSubmit} className='grid gap-6 lg:grid-cols-[1fr_320px]'>
         <div className='space-y-6'>
           <section className='rounded-[30px] border border-[#efdcd2] bg-white p-6 shadow-[0_18px_45px_rgba(94,35,23,0.08)]'>
             <p className='text-xs font-semibold uppercase tracking-[0.24em] text-[#a6806f]'>
