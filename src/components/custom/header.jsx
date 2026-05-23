@@ -2,6 +2,8 @@ import React, { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Bell, ChevronDown, LogOut, Menu, UserCircle, X } from "lucide-react";
 import MessageNotificationBell from './MessageNotificationBell';
+import { getCustomizationList } from '../../ServiceCustmer/CustomDesign/CustomDesignApi';
+import { useChatConnection } from '../../hooks/useChatConnection';
 
 /* ─── helpers ────────────────────────────────────────────────────────────── */
 
@@ -57,11 +59,57 @@ const useDropdownPosition = (triggerRef, open, popupWidth = 320) => {
 
 /* ─── Notification Panel ─────────────────────────────────────────────────── */
 
-const NotificationPanel = () => {
+const NotificationPanel = ({ pendingCustomizationCount: initialCount = 0, onOpenCustomizations, connection }) => {
   const [open, setOpen] = useState(false);
+  const [liveCount, setLiveCount] = useState(initialCount);
   const triggerRef = useRef(null);
   const panelRef   = useRef(null);
   const style = useDropdownPosition(triggerRef, open, 320);
+
+  // Keep liveCount in sync when parent re-fetches and passes a new prop value
+  useEffect(() => { setLiveCount(initialCount); }, [initialCount]);
+
+  /*
+   * SignalR: listen for CustomizationRequestCreated.
+   * The backend fires this event on the seller's connection after the DB
+   * trigger inserts the notification row.
+   * When received → call GET /api/customization/list to get the real count.
+   */
+  useEffect(() => {
+    if (!connection) return;
+
+    const handleNewCustomization = () => {
+      // Read seller id at call time (not at hook setup time)
+      const sid = (() => {
+        try {
+          const d = JSON.parse(localStorage.getItem('login') || '{}');
+          return d?.userId ?? d?.UserId ?? d?.iUserId ?? null;
+        } catch { return null; }
+      })();
+      getCustomizationList(sid)
+        .then((res) => {
+          const raw = Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : [];
+          const pending = raw.filter(
+            (r) => ['requested','pending'].includes((r.sStatus ?? r.status ?? '').toLowerCase()),
+          ).length;
+          setLiveCount(pending);
+        })
+        .catch(() => {
+          setLiveCount((prev) => prev + 1);
+        });
+    };
+
+    connection.on('CustomizationRequestCreated', handleNewCustomization);
+    // Also listen on a generic notification event some backends use
+    connection.on('NewCustomizationNotification', handleNewCustomization);
+
+    return () => {
+      connection.off('CustomizationRequestCreated', handleNewCustomization);
+      connection.off('NewCustomizationNotification', handleNewCustomization);
+    };
+  }, [connection]);
+
+  const totalNotifications = liveCount;
 
   /* close on outside click */
   useEffect(() => {
@@ -76,6 +124,11 @@ const NotificationPanel = () => {
     return () => document.removeEventListener('mousedown', handler);
   }, [open]);
 
+  const handleMarkAllRead = () => {
+    setLiveCount(0);
+    setOpen(false);
+  };
+
   return (
     <>
       <button
@@ -87,7 +140,14 @@ const NotificationPanel = () => {
         aria-expanded={open}
       >
         <Bell size={16} className="sm:h-[18px] sm:w-[18px]" />
-        <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-[#d97706] sm:right-2 sm:top-2" />
+        {totalNotifications > 0 && (
+          <span className="absolute -right-1 -top-1 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[#f97316] px-0.5 text-[9px] font-bold text-white shadow">
+            {totalNotifications > 99 ? '99+' : totalNotifications}
+          </span>
+        )}
+        {totalNotifications === 0 && (
+          <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-[#d97706] sm:right-2 sm:top-2" />
+        )}
       </button>
 
       {open && createPortal(
@@ -101,7 +161,11 @@ const NotificationPanel = () => {
             <div className="flex items-center gap-2">
               <Bell size={14} className="text-[#7a1e2c]" />
               <span className="text-sm font-bold text-[#2f1d18]">Notifications</span>
-              <span className="rounded-full bg-[#7a1e2c] px-1.5 py-0.5 text-[10px] font-bold text-white">1</span>
+              {totalNotifications > 0 && (
+                <span className="rounded-full bg-[#7a1e2c] px-1.5 py-0.5 text-[10px] font-bold text-white">
+                  {totalNotifications}
+                </span>
+              )}
             </div>
             <button
               type="button"
@@ -114,6 +178,32 @@ const NotificationPanel = () => {
 
           {/* list */}
           <div className="divide-y divide-[#fdf0ea]">
+            {/* Customization requests notification */}
+            {liveCount > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  setOpen(false);
+                  onOpenCustomizations?.();
+                }}
+                className="flex w-full items-start gap-3 px-4 py-3 text-left transition hover:bg-[#fffaf6]"
+              >
+                <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#fff0e4] text-[#f97316]">
+                  <Bell size={14} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-[#2f1d18]">
+                    {liveCount} new customization{liveCount > 1 ? ' requests' : ' request'}
+                  </p>
+                  <p className="mt-0.5 text-xs text-[#8d6e63]">
+                    Buyers are waiting for your review and quotation
+                  </p>
+                  <p className="mt-1 text-[10px] font-medium text-[#b19588]">Just now</p>
+                </div>
+              </button>
+            )}
+
+            {/* Default order notification */}
             <div className="flex items-start gap-3 px-4 py-3">
               <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#fff0e4] text-[#7a1e2c]">
                 <Bell size={14} />
@@ -130,7 +220,7 @@ const NotificationPanel = () => {
           <div className="border-t border-[#f5ece8] px-4 py-2.5">
             <button
               type="button"
-              onClick={() => setOpen(false)}
+              onClick={handleMarkAllRead}
               className="w-full rounded-xl bg-[#7a1e2c] py-2 text-xs font-bold text-white transition hover:bg-[#651623]"
             >
               Mark all as read
@@ -251,12 +341,16 @@ const Header = ({
   onLogout,
   onOpenEnquiry,
   onOpenProfile,
+  onOpenCustomizations,
+  pendingCustomizationCount = 0,
 }) => {
   const currentTabLabel = activeTab
     ? activeTab.charAt(0).toUpperCase() + activeTab.slice(1)
     : "Dashboard";
 
   const user = getLoginUser();
+  // Use the shared SignalR connection so the notification bell gets real-time events
+  const connection = useChatConnection();
 
   return (
     <header className="fixed left-0 right-0 top-0 z-40 border-b border-[#eadfda] bg-white/85 backdrop-blur-xl">
@@ -316,7 +410,11 @@ const Header = ({
           ) : (
             <>
               {/* notification bell — portal-based popup */}
-              <NotificationPanel />
+              <NotificationPanel
+                pendingCustomizationCount={pendingCustomizationCount}
+                onOpenCustomizations={onOpenCustomizations}
+                connection={connection}
+              />
 
               {/* message bell — already portal-safe via its own ref */}
               {onOpenEnquiry && (

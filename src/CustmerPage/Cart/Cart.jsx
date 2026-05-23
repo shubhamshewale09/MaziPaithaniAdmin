@@ -15,9 +15,10 @@ import {
 } from 'lucide-react';
 import { getCartList, updateCartQuantity, deleteCartItem } from '../../ServiceCustmer/Cart/CartApi';
 import Loader from '../../components/custom/Loader';
+import { Base_Url } from '../../BaseURL/BaseUrl';
 
-const BASE = 'http://15.207.106.250';
-const imgUrl = (url) => (!url ? null : url.startsWith('http') ? url : `${BASE}${url}`);
+const BASE = Base_Url.replace(/\/$/, ''); // strip trailing slash
+const imgUrl = (url) => (!url ? null : url.startsWith('http') ? url : `${BASE}${url.startsWith('/') ? '' : '/'}${url}`);
 
 /* ─── Confirmation modal ──────────────────────────────────────────────────── */
 const ConfirmModal = ({ open, icon, iconBg, title, message, confirmLabel, confirmCls, loading, onConfirm, onCancel }) => {
@@ -60,7 +61,14 @@ const ConfirmModal = ({ open, icon, iconBg, title, message, confirmLabel, confir
 
 /* ─── Single cart product card ───────────────────────────────────────────── */
 const CartItemCard = ({ item, index, onAskRemove, onAskQty, onChatSeller }) => {
-  const src = imgUrl(item.images?.find((i) => i.bIsPrimary)?.sImageUrl ?? item.images?.[0]?.sImageUrl);
+  // images can be: [{sImageUrl, bIsPrimary}] from API, or [string] if normalized
+  const getImgSrc = (images) => {
+    if (!Array.isArray(images) || images.length === 0) return null;
+    if (typeof images[0] === 'string') return imgUrl(images[0]);
+    const primary = images.find((i) => i.bIsPrimary);
+    return imgUrl((primary ?? images[0])?.sImageUrl);
+  };
+  const src = getImgSrc(item.images);
 
   return (
     <div
@@ -176,15 +184,16 @@ const Cart = memo(({ onCheckout, onChatSeller, onCartCountChange }) => {
   const [removing, setRemoving]         = useState(false);
   const [qtyTarget, setQtyTarget]       = useState(null);
   const [qtyLoading, setQtyLoading]     = useState(false);
+  const fetchedRef = useRef(false);
 
   useEffect(() => {
-    let cancelled = false;
+    if (fetchedRef.current) return;
+    fetchedRef.current = true;
     setLoading(true);
     getCartList()
-      .then((res) => { if (!cancelled) setItems(res?.items ?? []); })
-      .catch(()   => { if (!cancelled) setItems([]); })
-      .finally(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; };
+      .then((res) => setItems(res?.items ?? []))
+      .catch(()   => setItems([]))
+      .finally(() => setLoading(false));
   }, []);
 
   const handleAskQty = (item, delta) => {
@@ -352,13 +361,18 @@ const Cart = memo(({ onCheckout, onChatSeller, onCartCountChange }) => {
               {items.map((i) => (
                 <div key={i.cartItemId} className='flex items-center gap-3 rounded-[18px] bg-[#fffaf6] p-2.5'>
                   <div className='h-10 w-10 shrink-0 overflow-hidden rounded-xl bg-gradient-to-br from-[#fff8f1] to-[#f7d9c6]'>
-                    {imgUrl(i.images?.[0]?.sImageUrl) ? (
-                      <img src={imgUrl(i.images?.[0]?.sImageUrl)} alt='' className='h-full w-full object-cover object-top' />
-                    ) : (
-                      <div className='flex h-full w-full items-center justify-center'>
-                        <Package size={14} className='text-[#d4b5a8]' />
-                      </div>
-                    )}
+                    {(() => {
+                      const thumbSrc = typeof i.images?.[0] === 'string'
+                        ? imgUrl(i.images[0])
+                        : imgUrl(i.images?.[0]?.sImageUrl);
+                      return thumbSrc ? (
+                        <img src={thumbSrc} alt='' className='h-full w-full object-cover object-top' />
+                      ) : (
+                        <div className='flex h-full w-full items-center justify-center'>
+                          <Package size={14} className='text-[#d4b5a8]' />
+                        </div>
+                      );
+                    })()}
                   </div>
                   <div className='min-w-0 flex-1'>
                     <p className='truncate text-xs font-semibold text-[#34160f]'>{i.sProductTitle}</p>

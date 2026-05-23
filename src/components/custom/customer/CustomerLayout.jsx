@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { useMemo, useRef, useState, useEffect } from 'react';
 import {
   Bell,
   Grid2X2,
@@ -15,22 +16,23 @@ import {
 } from 'lucide-react';
 
 export const NAV_LINKS = [
-  { id: 'home', label: 'Home', icon: Home },
-  { id: 'categories', label: 'Shop', icon: Grid2X2 },
-  { id: 'custom', label: 'Custom', icon: Palette },
-  { id: 'wishlist', label: 'Wishlist', icon: Heart },
-  { id: 'orders', label: 'Orders', icon: Package },
-  { id: 'messages', label: 'Messages', icon: MessageSquare },
-  { id: 'profile', label: 'Profile', icon: User },
+  { id: 'home',        label: 'Home',        icon: Home },
+  { id: 'categories',  label: 'Shop',        icon: Grid2X2 },
+  { id: 'custom',      label: 'Custom',      icon: Palette },
+  { id: 'my-requests', label: 'My Requests', icon: Package },
+  { id: 'wishlist',    label: 'Wishlist',    icon: Heart },
+  { id: 'orders',      label: 'Orders',      icon: Package },
+  { id: 'messages',    label: 'Messages',    icon: MessageSquare },
+  { id: 'profile',     label: 'Profile',     icon: User },
 ];
 
 // Bottom nav shows only 5 primary items; rest accessible via hamburger menu
 const BOTTOM_NAV = [
-  { id: 'home', label: 'Home', icon: Home },
-  { id: 'categories', label: 'Shop', icon: Grid2X2 },
-  { id: 'cart', label: 'Cart', icon: ShoppingCart },
-  { id: 'orders', label: 'Orders', icon: Package },
-  { id: 'profile', label: 'Profile', icon: User },
+  { id: 'home',        label: 'Home',    icon: Home },
+  { id: 'categories',  label: 'Shop',    icon: Grid2X2 },
+  { id: 'cart',        label: 'Cart',    icon: ShoppingCart },
+  { id: 'my-requests', label: 'Requests',icon: Palette },
+  { id: 'profile',     label: 'Profile', icon: User },
 ];
 
 const quickFilters = ['Bridal', 'Pure Silk', 'Under 20k', 'Ready to Ship'];
@@ -43,10 +45,70 @@ const CustomerLayout = ({
   setActiveTab,
   cartCount = 0,
   unreadCount = 0,
+  customizationNotifCount = 0,
+  customizationNotifs = [],
+  onClearCustomizationNotifs,
+  onOpenMyRequests,
   searchTerm = '',
   onSearchChange,
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [bellOpen, setBellOpen]             = useState(false);
+  const bellRef  = useRef(null);
+  const panelRef = useRef(null);
+  const [bellStyle, setBellStyle] = useState({ position: 'fixed', top: 80, right: 8, zIndex: 9999 });
+
+  /* position the bell popup */
+  useEffect(() => {
+    if (!bellOpen || !bellRef.current) return;
+    const rect = bellRef.current.getBoundingClientRect();
+    const popW = Math.min(320, window.innerWidth - 16);
+    setBellStyle({
+      position: 'fixed',
+      top:  rect.bottom + 8,
+      left: Math.max(8, rect.right - popW),
+      zIndex: 9999,
+      width: popW,
+    });
+  }, [bellOpen]);
+
+  /* close on outside click */
+  useEffect(() => {
+    if (!bellOpen) return;
+    const handler = (e) => {
+      if (
+        panelRef.current  && !panelRef.current.contains(e.target) &&
+        bellRef.current   && !bellRef.current.contains(e.target)
+      ) setBellOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [bellOpen]);
+
+  const totalBellCount = customizationNotifCount;
+
+  const handleBellClick = () => setBellOpen((v) => !v);
+
+  const handleMarkAllRead = () => {
+    onClearCustomizationNotifs?.();
+    setBellOpen(false);
+  };
+
+  const handleGoToRequests = () => {
+    onClearCustomizationNotifs?.();
+    setBellOpen(false);
+    onOpenMyRequests?.();
+  };
+
+  const fmtTime = (iso) => {
+    if (!iso) return '';
+    try {
+      const diff = Math.floor((Date.now() - new Date(iso)) / 60000);
+      if (diff < 1) return 'Just now';
+      if (diff < 60) return `${diff}m ago`;
+      return `${Math.floor(diff / 60)}h ago`;
+    } catch { return ''; }
+  };
 
   const title = useMemo(() => {
     const currentItem = NAV_LINKS.find((item) => item.id === activeTab);
@@ -105,15 +167,102 @@ const CustomerLayout = ({
           </div>
 
           <div className='ml-auto flex items-center gap-2'>
+            {/* ── Notification Bell ── */}
             <button
+              ref={bellRef}
               type='button'
-              title='Notifications'
+              onClick={handleBellClick}
               className='group relative flex h-11 w-11 items-center justify-center rounded-2xl border border-[#ead9cf] bg-white text-[#7a1e2c]'
               aria-label='Notifications'
+              aria-expanded={bellOpen}
             >
               <span className={iconTooltipClassName}>Notifications</span>
               <Bell size={17} />
+              {totalBellCount > 0 && (
+                <span className='absolute -right-1 -top-1 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[#7a1e2c] px-0.5 text-[9px] font-bold text-white shadow'>
+                  {totalBellCount > 99 ? '99+' : totalBellCount}
+                </span>
+              )}
             </button>
+
+            {/* Bell portal popup */}
+            {bellOpen && createPortal(
+              <div
+                ref={panelRef}
+                style={bellStyle}
+                className='overflow-hidden rounded-2xl border border-[#f1e2d8] bg-white shadow-[0_16px_48px_rgba(122,30,44,0.18)]'
+              >
+                {/* header */}
+                <div className='flex items-center justify-between border-b border-[#f5ece8] px-4 py-3'>
+                  <div className='flex items-center gap-2'>
+                    <Bell size={14} className='text-[#7a1e2c]' />
+                    <span className='text-sm font-bold text-[#2f1d18]'>Notifications</span>
+                    {totalBellCount > 0 && (
+                      <span className='rounded-full bg-[#7a1e2c] px-1.5 py-0.5 text-[10px] font-bold text-white'>
+                        {totalBellCount}
+                      </span>
+                    )}
+                  </div>
+                  <button
+                    type='button'
+                    onClick={() => setBellOpen(false)}
+                    className='flex h-7 w-7 items-center justify-center rounded-full bg-[#fff7f2] text-[#7a1e2c] hover:bg-[#fde8e0]'
+                  >
+                    <X size={13} />
+                  </button>
+                </div>
+
+                {/* list */}
+                <div className='max-h-[320px] divide-y divide-[#fdf0ea] overflow-y-auto [scrollbar-width:thin]'>
+                  {customizationNotifs.length === 0 ? (
+                    <div className='flex flex-col items-center justify-center py-10 text-center'>
+                      <Bell size={24} className='text-[#d4b5a8]' />
+                      <p className='mt-3 text-sm font-semibold text-[#8b6759]'>No notifications yet</p>
+                      <p className='mt-1 text-xs text-[#b19588]'>Quotations and updates will appear here</p>
+                    </div>
+                  ) : (
+                    customizationNotifs.map((n, i) => (
+                      <button
+                        key={i}
+                        type='button'
+                        onClick={handleGoToRequests}
+                        className='flex w-full items-start gap-3 px-4 py-3 text-left transition hover:bg-[#fffaf6]'
+                      >
+                        <div className='mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-purple-100 text-purple-600'>
+                          <Bell size={13} />
+                        </div>
+                        <div className='min-w-0 flex-1'>
+                          <p className='text-sm font-semibold text-[#2f1d18]'>{n.msg}</p>
+                          <p className='mt-0.5 text-[10px] text-[#b19588]'>{fmtTime(n.time)}</p>
+                        </div>
+                      </button>
+                    ))
+                  )}
+                </div>
+
+                {/* footer */}
+                <div className='border-t border-[#f5ece8] px-4 py-2.5 flex gap-2'>
+                  <button
+                    type='button'
+                    onClick={handleGoToRequests}
+                    className='flex-1 rounded-xl bg-[#7a1e2c] py-2 text-xs font-bold text-white transition hover:bg-[#651623]'
+                  >
+                    View My Requests
+                  </button>
+                  {totalBellCount > 0 && (
+                    <button
+                      type='button'
+                      onClick={handleMarkAllRead}
+                      className='rounded-xl border border-[#ead9cf] px-3 py-2 text-xs font-semibold text-[#6b5048] hover:border-[#7a1e2c]'
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+              </div>,
+              document.body
+            )}
+
             <button
               type='button'
               title='Open cart'
