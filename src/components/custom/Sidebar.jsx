@@ -2,6 +2,7 @@ import React from "react";
 import {
   LayoutDashboard,
   Package,
+  Palette,
   ShoppingCart,
   MessageSquare,
   DollarSign,
@@ -21,11 +22,13 @@ const Sidebar = ({
   isOpen,
   onClose,
   disableTabs = false,
+  customizationCount = 0,
 }) => {
   const menuItems = [
     { id: "dashboard", label: "Dashboard", icon: <LayoutDashboard size={18} /> },
     { id: "products", label: "Products", icon: <Package size={18} /> },
     { id: "orders", label: "Orders", icon: <ShoppingCart size={18} /> },
+    { id: "customizations", label: "Customizations", icon: <Palette size={18} />, badge: customizationCount },
     { id: "enquiries", label: "Enquiries", icon: <MessageSquare size={18} /> },
     { id: "revenue", label: "Revenue", icon: <DollarSign size={18} /> },
     { id: "profile", label: "Profile", icon: <User size={18} /> },
@@ -121,19 +124,33 @@ const Sidebar = ({
                   >
                     <span
                       className={[
-                        "flex h-10 w-10 items-center justify-center rounded-xl transition-all duration-200",
+                        "relative flex h-10 w-10 items-center justify-center rounded-xl transition-all duration-200",
                         isActive ? "bg-white/55" : "bg-white/8 group-hover:bg-white/15",
                       ].join(" ")}
                     >
                       {item.icon}
+                      {/* Badge for collapsed sidebar */}
+                      {isCollapsed && !isMobile && item.badge > 0 && (
+                        <span className="absolute -right-1 -top-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-[#f97316] px-0.5 text-[9px] font-bold text-white">
+                          {item.badge}
+                        </span>
+                      )}
                     </span>
 
                     {(!isCollapsed || isMobile) && (
-                      <span>
-                        <span className="block text-sm font-semibold">{item.label}</span>
-                        <span className="block text-xs text-current/70">
-                          Open {item.label.toLowerCase()} panel
+                      <span className="flex flex-1 items-center justify-between">
+                        <span>
+                          <span className="block text-sm font-semibold">{item.label}</span>
+                          <span className="block text-xs text-current/70">
+                            Open {item.label.toLowerCase()} panel
+                          </span>
                         </span>
+                        {/* Badge for expanded sidebar */}
+                        {item.badge > 0 && (
+                          <span className="ml-2 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[#f97316] px-1 text-[9px] font-bold text-white">
+                            {item.badge}
+                          </span>
+                        )}
                       </span>
                     )}
                   </button>

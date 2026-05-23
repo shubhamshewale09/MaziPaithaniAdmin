@@ -20,6 +20,7 @@ import CustomerLayout from '../../components/custom/customer/CustomerLayout';
 import Categories from '../Categories/Categories';
 import ProductDetail from '../ProductDetail/ProductDetail';
 import CustomDesign from '../CustomDesign/CustomDesign';
+import MyRequests from '../CustomDesign/MyRequests';
 import Cart from '../Cart/Cart';
 import Wishlist from '../Wishlist/Wishlist';
 import Checkout from '../Checkout/Checkout';
@@ -31,6 +32,7 @@ import { showApiSuccess, showApiError } from '../../Utils/Utils';
 import ConfirmationModal from '../../components/custom/ConfirmationModal';
 import { GetAllProductData } from '../../services/Product/ProductApi';
 import { addToWishlist, getWishlist, removeFromWishlist } from '../../ServiceCustmer/Wishlist/WishlistApi';
+import { addToCart as addToCartApi } from '../../ServiceCustmer/Cart/CartApi';
 import { Base_Url } from '../../BaseURL/BaseUrl';
 
 const getUserId = () => {
@@ -100,7 +102,7 @@ const normalizeWishlist = (response) =>
     }));
 
 // ── Product card ──────────────────────────────────────────────────────────────
-const ProductCard = ({ item, onOpen, onAddToCart, onChatSeller, onToggleWishlist, isWished = false }) => {
+const ProductCard = ({ item, onOpen, onAddToCart, onChatSeller, onToggleWishlist, onCustomRequest, isWished = false }) => {
   const [activeImg, setActiveImg] = useState(0);
   const [added, setAdded] = useState(false);
   const hasImages = item.images.length > 0;
@@ -122,6 +124,11 @@ const ProductCard = ({ item, onOpen, onAddToCart, onChatSeller, onToggleWishlist
   const handleChat = (e) => {
     e.stopPropagation();
     onChatSeller({ sellerId: item.sellerUserId, sellerName: item.seller });
+  };
+
+  const handleCustomize = (e) => {
+    e.stopPropagation();
+    onCustomRequest?.(item);
   };
 
   return (
@@ -159,6 +166,13 @@ const ProductCard = ({ item, onOpen, onAddToCart, onChatSeller, onToggleWishlist
         {!isOutOfStock && item.stock > 5 && (
           <span className='absolute top-2 left-2 bg-emerald-600 text-white text-[9px] font-bold px-2 py-0.5 rounded-full shadow'>
             In Stock
+          </span>
+        )}
+
+        {/* Customizable badge — top-left when no stock badge */}
+        {item.isCustomizationAvailable && item.stock > 5 && (
+          <span className='absolute top-2 left-2 inline-flex items-center gap-0.5 bg-amber-500 text-white text-[9px] font-bold px-2 py-0.5 rounded-full shadow'>
+            <Sparkles size={8} /> Customizable
           </span>
         )}
 
@@ -208,7 +222,7 @@ const ProductCard = ({ item, onOpen, onAddToCart, onChatSeller, onToggleWishlist
           {item.name}
         </p>
 
-        <p className='text-sm font-extrabold text-[#7a1e2c] mb-1.5'>₹{item.price.toLocaleString('en-IN')}</p>
+        <p className='text-sm font-extrabold text-[#7a1e2c] mb-1.5'>&#8377;{item.price.toLocaleString('en-IN')}</p>
 
         <div className='flex flex-wrap gap-1 mb-2'>
           {item.color && (
@@ -224,41 +238,56 @@ const ProductCard = ({ item, onOpen, onAddToCart, onChatSeller, onToggleWishlist
           )}
         </div>
 
-        {/* Single action row: icon buttons + Add to Cart */}
-        <div className='mt-auto flex items-center gap-1'>
-          <button
-            type='button'
-            onClick={() => onOpen(item)}
-            title='View'
-            className='flex items-center justify-center h-7 w-7 shrink-0 rounded-lg border border-[#e8d5cc] text-[#7a1e2c] hover:bg-[#fff1e7] transition-colors'
-          >
-            <Zap size={11} />
-          </button>
-          {item.sellerUserId && (
+        {/* Action row */}
+        <div className='mt-auto space-y-1.5'>
+          {/* Customize Now button — only when customization is available */}
+          {item.isCustomizationAvailable && (
             <button
               type='button'
-              onClick={handleChat}
-              title='Chat'
-              className='flex items-center justify-center h-7 w-7 shrink-0 rounded-lg border border-[#e8d5cc] text-[#7a1e2c] hover:bg-[#fff1e7] transition-colors'
+              onClick={handleCustomize}
+              className='flex w-full items-center justify-center gap-1.5 rounded-lg border border-amber-400 bg-[#fff8e1] py-1.5 text-[10px] font-bold text-amber-700 transition hover:bg-amber-100 active:scale-95'
             >
-              <MessageCircle size={11} />
+              <Sparkles size={10} className='shrink-0' />
+              Customize Now
             </button>
           )}
-          <button
-            type='button'
-            onClick={handleAddToCart}
-            disabled={isOutOfStock}
-            className={`flex-1 min-w-0 flex items-center justify-center gap-1 py-1.5 rounded-lg text-[10px] font-bold transition-all duration-200 ${
-              isOutOfStock
-                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                : added
-                ? 'bg-emerald-600 text-white'
-                : 'bg-[#7a1e2c] text-white hover:bg-[#651623] active:scale-95'
-            }`}
-          >
-            <ShoppingCart size={11} className='shrink-0' />
-            <span className='truncate'>{added ? 'Added!' : isOutOfStock ? 'N/A' : 'Add to Cart'}</span>
-          </button>
+
+          {/* Icon buttons + Add to Cart */}
+          <div className='flex items-center gap-1'>
+            <button
+              type='button'
+              onClick={() => onOpen(item)}
+              title='View'
+              className='flex items-center justify-center h-7 w-7 shrink-0 rounded-lg border border-[#e8d5cc] text-[#7a1e2c] hover:bg-[#fff1e7] transition-colors'
+            >
+              <Zap size={11} />
+            </button>
+            {item.sellerUserId && (
+              <button
+                type='button'
+                onClick={handleChat}
+                title='Chat'
+                className='flex items-center justify-center h-7 w-7 shrink-0 rounded-lg border border-[#e8d5cc] text-[#7a1e2c] hover:bg-[#fff1e7] transition-colors'
+              >
+                <MessageCircle size={11} />
+              </button>
+            )}
+            <button
+              type='button'
+              onClick={handleAddToCart}
+              disabled={isOutOfStock}
+              className={`flex-1 min-w-0 flex items-center justify-center gap-1 py-1.5 rounded-lg text-[10px] font-bold transition-all duration-200 ${
+                isOutOfStock
+                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                  : added
+                  ? 'bg-emerald-600 text-white'
+                  : 'bg-[#7a1e2c] text-white hover:bg-[#651623] active:scale-95'
+              }`}
+            >
+              <ShoppingCart size={11} className='shrink-0' />
+              <span className='truncate'>{added ? 'Added!' : isOutOfStock ? 'N/A' : 'Add to Cart'}</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -266,7 +295,7 @@ const ProductCard = ({ item, onOpen, onAddToCart, onChatSeller, onToggleWishlist
 };
 
 // ── Horizontal scroll section ─────────────────────────────────────────────────
-const ScrollSection = ({ title, subtitle, products, onOpen, onAddToCart, onChatSeller, onToggleWishlist, wishlistIds, onViewAll }) => {
+const ScrollSection = ({ title, subtitle, products, onOpen, onAddToCart, onChatSeller, onToggleWishlist, onCustomRequest, wishlistIds, onViewAll }) => {
   const ref = useRef(null);
   const scroll = (dir) => ref.current?.scrollBy({ left: dir * 320, behavior: 'smooth' });
   if (!products.length) return null;
@@ -295,7 +324,7 @@ const ScrollSection = ({ title, subtitle, products, onOpen, onAddToCart, onChatS
       <div ref={ref} className='flex gap-4 overflow-x-auto pb-1' style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
         {products.map((item) => (
           <div key={item.id} className='w-[220px] shrink-0'>
-            <ProductCard item={item} onOpen={onOpen} onAddToCart={onAddToCart} onChatSeller={onChatSeller} onToggleWishlist={onToggleWishlist} isWished={wishlistIds?.includes(item.id)} />
+            <ProductCard item={item} onOpen={onOpen} onAddToCart={onAddToCart} onChatSeller={onChatSeller} onToggleWishlist={onToggleWishlist} onCustomRequest={onCustomRequest} isWished={wishlistIds?.includes(item.id)} />
           </div>
         ))}
       </div>
@@ -304,7 +333,7 @@ const ScrollSection = ({ title, subtitle, products, onOpen, onAddToCart, onChatS
 };
 
 // ── All products grid ─────────────────────────────────────────────────────────
-const AllProductsGrid = ({ products, onOpen, onAddToCart, onChatSeller, onToggleWishlist, wishlistIds, onViewAll }) => {
+const AllProductsGrid = ({ products, onOpen, onAddToCart, onChatSeller, onToggleWishlist, onCustomRequest, wishlistIds, onViewAll }) => {
   if (!products.length) return (
     <div className='rounded-2xl border border-dashed border-[#ddc6bb] bg-white px-6 py-14 text-center'>
       <Package size={40} className='mx-auto text-[#d4b5a8] mb-3' />
@@ -318,7 +347,7 @@ const AllProductsGrid = ({ products, onOpen, onAddToCart, onChatSeller, onToggle
         <div>
           <p className='text-[11px] font-bold uppercase tracking-widest text-[#a6806f]'>All Products</p>
           <h2 className='mt-1 text-xl font-extrabold text-[#1a0a07]'>
-            Complete Collection · <span className='text-[#7a1e2c]'>{products.length} sarees</span>
+            Complete Collection &middot; <span className='text-[#7a1e2c]'>{products.length} sarees</span>
           </h2>
         </div>
         <button type='button' onClick={onViewAll} className='flex items-center gap-1 text-xs font-semibold text-[#7a1e2c] hover:underline'>
@@ -327,7 +356,7 @@ const AllProductsGrid = ({ products, onOpen, onAddToCart, onChatSeller, onToggle
       </div>
       <div className='grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4'>
         {products.map((item) => (
-          <ProductCard key={item.id} item={item} onOpen={onOpen} onAddToCart={onAddToCart} onChatSeller={onChatSeller} onToggleWishlist={onToggleWishlist} isWished={wishlistIds?.includes(item.id)} />
+          <ProductCard key={item.id} item={item} onOpen={onOpen} onAddToCart={onAddToCart} onChatSeller={onChatSeller} onToggleWishlist={onToggleWishlist} onCustomRequest={onCustomRequest} isWished={wishlistIds?.includes(item.id)} />
         ))}
       </div>
     </section>
@@ -526,6 +555,7 @@ const HomeTab = ({ products, onBrowseCollection, onOpenProduct, onCustomRequest,
             products={newArrivals} onOpen={onOpenProduct}
             onAddToCart={onAddToCart} onChatSeller={onChatSeller}
             onToggleWishlist={onToggleWishlist} wishlistIds={wishlistIds}
+            onCustomRequest={onCustomRequest}
             onViewAll={onBrowseCollection}
           />
 
@@ -535,6 +565,7 @@ const HomeTab = ({ products, onBrowseCollection, onOpenProduct, onCustomRequest,
               products={customizable} onOpen={onOpenProduct}
               onAddToCart={onAddToCart} onChatSeller={onChatSeller}
               onToggleWishlist={onToggleWishlist} wishlistIds={wishlistIds}
+              onCustomRequest={onCustomRequest}
             />
           )}
 
@@ -542,6 +573,7 @@ const HomeTab = ({ products, onBrowseCollection, onOpenProduct, onCustomRequest,
             products={filtered} onOpen={onOpenProduct}
             onAddToCart={onAddToCart} onChatSeller={onChatSeller}
             onToggleWishlist={onToggleWishlist} wishlistIds={wishlistIds}
+            onCustomRequest={onCustomRequest}
             onViewAll={onBrowseCollection}
           />
         </div>
@@ -573,6 +605,7 @@ const CustomerDashboard = ({ guestMode = false }) => {
   const connection = useChatConnection();
   const [activeTab, setActiveTab] = useState('home');
   const [selectedProduct, setSelectedProduct] = useState(null);
+  const [customProduct, setCustomProduct] = useState(null); // product context for custom form
   const [searchTerm, setSearchTerm] = useState('');
   const [chatTarget, setChatTarget] = useState(null); // { sellerId, sellerName }
   const [cartCount, setCartCount] = useState(() => {
@@ -582,9 +615,12 @@ const CustomerDashboard = ({ guestMode = false }) => {
     } catch { return 0; }
   });
   const [unreadCount, setUnreadCount] = useState(0);
+  const [customizationNotifCount, setCustomizationNotifCount] = useState(0);
+  const [customizationNotifs, setCustomizationNotifs] = useState([]); // [{msg, time}]
   const [products, setProducts] = useState([]);
   const [wishlistItems, setWishlistItems] = useState([]);
   const [cartItemIds, setCartItemIds] = useState([]);
+  const [cartRefreshKey, setCartRefreshKey] = useState(0);
   const [wishlistLoaded, setWishlistLoaded] = useState(false);
   const [wishlistConfirm, setWishlistConfirm] = useState(null);
   // guest login modal
@@ -629,6 +665,61 @@ const CustomerDashboard = ({ guestMode = false }) => {
     if (activeTab === 'messages') setUnreadCount(0);
   }, [activeTab]);
 
+  // ── SignalR: customization events for the buyer ──────────────────────────
+  useEffect(() => {
+    if (!connection) return;
+
+    const addNotif = (msg) => {
+      setCustomizationNotifCount((n) => n + 1);
+      setCustomizationNotifs((prev) => [
+        { msg, time: new Date().toISOString() },
+        ...prev.slice(0, 9), // keep last 10
+      ]);
+    };
+
+    // Seller sent a quotation → buyer gets notified
+    const handleQuotation = (data) => {
+      const crNo   = data?.sCostReqNo ?? data?.crNo ?? '';
+      const amount = data?.dQuotedPrice ?? data?.amount ?? null;
+      const text   = amount
+        ? `Quotation received${crNo ? ` for ${crNo}` : ''}: ₹${Number(amount).toLocaleString('en-IN')}`
+        : `Quotation received${crNo ? ` for ${crNo}` : ''} from seller`;
+      addNotif(text);
+    };
+
+    // Seller approved the request → order started
+    const handleApproved = (data) => {
+      const crNo = data?.sCostReqNo ?? data?.crNo ?? '';
+      addNotif(`Order started${crNo ? ` for ${crNo}` : ''} — customization is in progress`);
+    };
+
+    // Generic customization status update
+    const handleStatusUpdate = (data) => {
+      const crNo   = data?.sCostReqNo ?? data?.crNo ?? '';
+      const status = data?.sStatus ?? data?.status ?? '';
+      if (status) addNotif(`Request${crNo ? ` ${crNo}` : ''} updated to: ${status}`);
+    };
+
+    connection.on('QuotationReceived',          handleQuotation);
+    connection.on('CustomizationQuotation',     handleQuotation);
+    connection.on('NewQuotationNotification',   handleQuotation);
+    connection.on('CustomizationApproved',      handleApproved);
+    connection.on('CustomizationStatusUpdated', handleStatusUpdate);
+
+    return () => {
+      connection.off('QuotationReceived',          handleQuotation);
+      connection.off('CustomizationQuotation',     handleQuotation);
+      connection.off('NewQuotationNotification',   handleQuotation);
+      connection.off('CustomizationApproved',      handleApproved);
+      connection.off('CustomizationStatusUpdated', handleStatusUpdate);
+    };
+  }, [connection]);
+
+  // Clear customization notif count when buyer opens My Requests
+  useEffect(() => {
+    if (activeTab === 'my-requests') setCustomizationNotifCount(0);
+  }, [activeTab]);
+
   const handleLogout = () => {
     disconnectChatHub();
     logout();
@@ -642,11 +733,25 @@ const CustomerDashboard = ({ guestMode = false }) => {
   useEffect(() => { window.scrollTo({ top: 0, behavior: 'smooth' }); }, [activeTab]);
 
   const handleViewDetail = (product) => { setPreviousTab(activeTab); setSelectedProduct(product); setActiveTab('product-detail'); };
-  const handleAddToCart = (product) => {
+
+  // Called from product card "Customize Now" or ProductDetail "Request customization"
+  // Stores the product context so CustomDesign form is pre-filled
+  const handleCustomRequest = (product) => {
     if (guestMode) { setShowLoginModal(true); return; }
-    setCartCount((c) => c + 1);
-    if (product?.id) setCartItemIds((prev) => [...new Set([...prev, product.id])]);
-    setActiveTab('cart');
+    setCustomProduct(product ?? null);
+    setActiveTab('custom');
+  };
+  const handleAddToCart = async (product, quantity = 1) => {
+    if (guestMode) { setShowLoginModal(true); return; }
+    try {
+      await addToCartApi(product.id ?? product.iProductId, product.sellerUserId, quantity);
+      setCartCount((c) => c + 1);
+      if (product?.id) setCartItemIds((prev) => [...new Set([...prev, product.id])]);
+      setCartRefreshKey((k) => k + 1);
+      setActiveTab('cart');
+    } catch {
+      showApiError('Failed to add item to cart. Please try again.');
+    }
   };
 
   const handleToggleWishlist = (item) => {
@@ -702,7 +807,7 @@ const CustomerDashboard = ({ guestMode = false }) => {
   };
 
   // Intercept tab changes for guest mode — protected tabs require login
-  const PROTECTED_TABS = new Set(['cart', 'checkout', 'messages', 'wishlist', 'orders', 'profile', 'custom']);
+  const PROTECTED_TABS = new Set(['cart', 'checkout', 'messages', 'wishlist', 'orders', 'profile', 'custom', 'my-requests']);
   const handleTabChange = (tab) => {
     if (guestMode && PROTECTED_TABS.has(tab)) {
       setShowLoginModal(true);
@@ -718,6 +823,7 @@ const CustomerDashboard = ({ guestMode = false }) => {
       home: 'Customer Home | Majhi Paithani',
       categories: 'Shop Sarees | Majhi Paithani',
       custom: 'Custom Design | Majhi Paithani',
+      'my-requests': 'My Requests | Majhi Paithani',
       cart: 'Your Cart | Majhi Paithani',
       checkout: 'Checkout | Majhi Paithani',
       orders: 'My Orders | Majhi Paithani',
@@ -734,7 +840,7 @@ const CustomerDashboard = ({ guestMode = false }) => {
           onBack={() => { setActiveTab(previousTab); setSelectedProduct(null); }}
           onAddToCart={handleAddToCart}
           onBuyNow={() => setActiveTab('checkout')}
-          onCustomRequest={() => setActiveTab('custom')}
+          onCustomRequest={handleCustomRequest}
           onChatSeller={handleChatSeller}
         />
       );
@@ -746,7 +852,7 @@ const CustomerDashboard = ({ guestMode = false }) => {
             products={products}
             onBrowseCollection={() => setActiveTab('categories')}
             onOpenProduct={handleViewDetail}
-            onCustomRequest={() => setActiveTab('custom')}
+            onCustomRequest={handleCustomRequest}
             onAddToCart={handleAddToCart}
             onChatSeller={handleChatSeller}
             onToggleWishlist={handleToggleWishlist}
@@ -756,7 +862,19 @@ const CustomerDashboard = ({ guestMode = false }) => {
       case 'categories':
         return <Categories onViewDetail={handleViewDetail} searchTerm={searchTerm} />;
       case 'custom':
-        return <CustomDesign />;
+        return (
+          <CustomDesign
+            sellerId={customProduct?.sellerUserId ?? 0}
+            productId={customProduct?.iProductId ?? customProduct?.id ?? 0}
+            onViewRequests={() => setActiveTab('my-requests')}
+          />
+        );
+      case 'my-requests':
+        return (
+          <MyRequests
+            onNewRequest={() => setActiveTab('categories')}
+          />
+        );
       case 'wishlist':
         return (
           <Wishlist
@@ -770,7 +888,7 @@ const CustomerDashboard = ({ guestMode = false }) => {
           />
         );
       case 'cart':
-        return <Cart onCheckout={() => setActiveTab('checkout')} onChatSeller={handleChatSeller} onCartCountChange={setCartCount} />;
+        return <Cart key={cartRefreshKey} onCheckout={() => setActiveTab('checkout')} onChatSeller={handleChatSeller} onCartCountChange={setCartCount} />;
       case 'checkout':
         return <Checkout onBack={() => setActiveTab('cart')} onSuccess={() => setActiveTab('orders')} />;
       case 'orders':
@@ -790,7 +908,7 @@ const CustomerDashboard = ({ guestMode = false }) => {
             products={products}
             onBrowseCollection={() => setActiveTab('categories')}
             onOpenProduct={handleViewDetail}
-            onCustomRequest={() => setActiveTab('custom')}
+            onCustomRequest={handleCustomRequest}
             onAddToCart={handleAddToCart}
             onChatSeller={handleChatSeller}
             onToggleWishlist={handleToggleWishlist}
@@ -869,6 +987,10 @@ const CustomerDashboard = ({ guestMode = false }) => {
         setActiveTab={handleTabChange}
         cartCount={cartCount}
         unreadCount={unreadCount}
+        customizationNotifCount={customizationNotifCount}
+        customizationNotifs={customizationNotifs}
+        onClearCustomizationNotifs={() => { setCustomizationNotifCount(0); setCustomizationNotifs([]); }}
+        onOpenMyRequests={() => handleTabChange('my-requests')}
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
       >

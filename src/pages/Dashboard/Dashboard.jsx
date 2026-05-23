@@ -23,7 +23,9 @@ import Orders from '../Orders/Orders';
 import Enquiries from '../Enquiries/Enquiries';
 import Revenue from '../Revenue/Revenue';
 import Settings from '../Settings/Settings';
+import Customizations from '../Customizations/Customizations';
 import { showApiSuccess } from '../../Utils/Utils';
+import { getCustomizationList } from '../../ServiceCustmer/CustomDesign/CustomDesignApi';
 
 const Dashboard = () => {
   const { logout } = useAuth();
@@ -36,6 +38,7 @@ const Dashboard = () => {
   const [isMobile, setIsMobile] = useState(
     typeof window !== 'undefined' ? window.innerWidth < 1024 : false,
   );
+  const [pendingCustomizationCount, setPendingCustomizationCount] = useState(0);
 
   useEffect(() => {
     const tab = searchParams.get('tab');
@@ -60,6 +63,34 @@ const Dashboard = () => {
     window.addEventListener('resize', handleResize);
 
     return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Fetch pending customization count for sidebar badge + notification bell
+  useEffect(() => {
+    const sid = (() => {
+      try {
+        const d = JSON.parse(localStorage.getItem('login') || 'null');
+        return d?.userId ?? d?.UserId ?? d?.iUserId ?? null;
+      } catch { return null; }
+    })();
+    getCustomizationList(sid)
+      .then((res) => {
+        const raw = Array.isArray(res?.data)
+          ? res.data
+          : Array.isArray(res)
+          ? res
+          : [];
+        // Count rows whose status is "requested" or "pending"
+        const pending = raw.filter((r) =>
+          ['requested', 'pending'].includes(
+            (r.sStatus ?? r.status ?? '').toLowerCase(),
+          ),
+        ).length;
+        setPendingCustomizationCount(pending);
+      })
+      .catch(() => {
+        setPendingCustomizationCount(0);
+      });
   }, []);
 
   const loginData = JSON.parse(localStorage.getItem('login') || 'null');
@@ -280,6 +311,8 @@ const Dashboard = () => {
         return <Products />;
       case 'orders':
         return <Orders />;
+      case 'customizations':
+        return <Customizations />;
       case 'enquiries':
         return <Enquiries initConv={enquiryInitConv} onInitConvConsumed={() => setEnquiryInitConv(null)} />;
       case 'revenue':
@@ -304,6 +337,8 @@ const Dashboard = () => {
           onLogout={() => setIsLogoutModalOpen(true)}
           onOpenEnquiry={handleOpenEnquiry}
           onOpenProfile={() => setActiveTab('profile')}
+          onOpenCustomizations={() => setActiveTab('customizations')}
+          pendingCustomizationCount={pendingCustomizationCount}
         />
 
         <Sidebar
@@ -315,6 +350,7 @@ const Dashboard = () => {
           isOpen={isMobileSidebarOpen}
           onClose={closeMobileSidebar}
           disableTabs={shouldForceProfileCompletion}
+          customizationCount={pendingCustomizationCount}
         />
 
         <main
