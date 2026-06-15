@@ -86,7 +86,7 @@ const Profile = ({ onLogout }) => {
       .then((res) => setAddresses(mapApiAddresses(Array.isArray(res) ? res : [], form.phone)))
       .catch((err) => showApiError(err, 'Failed to load addresses.'))
       .finally(() => setAddrLoading(false));
-  }, [activeTab, form.userId]);
+  }, [activeTab, form.userId, form.phone]);
 
   const fullName = [form.firstName, form.lastName].filter(Boolean).join(' ');
   const avatarLetter = form.firstName?.charAt(0)?.toUpperCase() || 'U';

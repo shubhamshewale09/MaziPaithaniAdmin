@@ -1,7 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { User } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
-  GetProfile,
   SaveShopInfo,
   UpdateShopInfo,
   SaveBankDetails,
@@ -56,6 +54,7 @@ const Profile = () => {
     sBankName: '',
   });
 
+  // eslint-disable-next-line no-unused-vars
   const calculateProgressFromBackend = (data) => {
     let progress = 0;
 
@@ -83,49 +82,18 @@ const Profile = () => {
     return progress;
   };
 
-  useEffect(() => {
-    fetchDashboardData();
-  }, []);
-
   const updateProgressFromDashboard = async () => {
     try {
       const userId = getUserId();
-      if (!userId) {
-        return null;
-      }
-
+      if (!userId) return null;
       const response = await GetSellerDashboard(userId);
-
       if (response && response.data && response.data.length > 0) {
         const sellerData = response.data[0];
-
-        if (sellerData.ProfileProgress !== undefined) {
-          setProgress(sellerData.ProfileProgress);
-        }
-
-        if (sellerData.iSellerId) {
-          setSellerId(sellerData.iSellerId);
-        }
-
+        if (sellerData.ProfileProgress !== undefined) setProgress(sellerData.ProfileProgress);
+        if (sellerData.iSellerId) setSellerId(sellerData.iSellerId);
         setUserData(sellerData);
-
-        setShopInfo({
-          sShopName: sellerData.sShopName || '',
-          sShopDescription: sellerData.sShopDescription || '',
-          sShopAddress: sellerData.sShopAddress || '',
-          sCity: sellerData.sCity || '',
-          sState: sellerData.sState || '',
-          sPincode: sellerData.spincode || '',
-          sBusinessDescription: sellerData.sBusinessDescription || '',
-        });
-
-        setBankDetails({
-          sAccountHolderName: sellerData.SAccountHolderName || '',
-          sAccountNumber: sellerData.SAccountNumber || '',
-          sifscCode: sellerData.SIFSCCode || '',
-          sBankName: sellerData.SBankName || '',
-        });
-
+        setShopInfo({ sShopName: sellerData.sShopName || '', sShopDescription: sellerData.sShopDescription || '', sShopAddress: sellerData.sShopAddress || '', sCity: sellerData.sCity || '', sState: sellerData.sState || '', sPincode: sellerData.spincode || '', sBusinessDescription: sellerData.sBusinessDescription || '' });
+        setBankDetails({ sAccountHolderName: sellerData.SAccountHolderName || '', sAccountNumber: sellerData.SAccountNumber || '', sifscCode: sellerData.SIFSCCode || '', sBankName: sellerData.SBankName || '' });
         return response;
       }
       return null;
@@ -134,7 +102,7 @@ const Profile = () => {
     }
   };
 
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = useCallback(async () => {
     try {
       setLoading(true);
       const userId = getUserId();
@@ -185,46 +153,11 @@ const Profile = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const fetchUserData = async () => {
-    try {
-      setLoading(true);
-      const userId = getUserId();
-      if (!userId) {
-        return;
-      }
-
-      const response = await GetProfile(userId);
-
-      if (response && response.data) {
-        const data = response.data;
-        setUserData(data);
-
-        setShopInfo({
-          sShopName: data.sShopName || '',
-          sShopDescription: data.sShopDescription || '',
-          sShopAddress: data.sShopAddress || '',
-          sCity: data.sCity || '',
-          sState: data.sState || '',
-          sPincode: data.sPincode || '',
-          sBusinessDescription: data.sBusinessDescription || '',
-        });
-
-        setBankDetails({
-          sAccountHolderName: data.sAccountHolderName || '',
-          sAccountNumber: data.sAccountNumber || '',
-          sifscCode: data.sifscCode || '',
-          sBankName: data.sBankName || '',
-        });
-
-        setProgress(calculateProgressFromBackend(data));
-      }
-    } catch (error) {
-    } finally {
-      setLoading(false);
-    }
-  };
+  useEffect(() => {
+    fetchDashboardData();
+  }, [fetchDashboardData]);
 
   const handleInputChange = (tab, field, value) => {
     switch (tab) {
@@ -233,6 +166,8 @@ const Profile = () => {
         break;
       case 'bankDetails':
         setBankDetails((prev) => ({ ...prev, [field]: value }));
+        break;
+      default:
         break;
     }
   };
@@ -307,32 +242,6 @@ const Profile = () => {
       }
 
       setActiveTab(tab);
-    }
-  };
-
-  const toggleEditMode = () => {
-    setIsEditMode(!isEditMode);
-    if (!isEditMode) {
-      setActiveTab('shopInfo');
-
-      if (userData) {
-        setShopInfo({
-          sShopName: userData.sShopName || '',
-          sShopDescription: userData.sShopDescription || '',
-          sShopAddress: userData.SShopAddress || '',
-          sCity: userData.SCity || '',
-          sState: userData.SState || '',
-          sPincode: userData.SPincode || '',
-          sBusinessDescription: userData.SBusinessDescription || '',
-        });
-
-        setBankDetails({
-          sAccountHolderName: userData.SAccountHolderName || '',
-          sAccountNumber: userData.SAccountNumber || '',
-          sifscCode: userData.SIFSCCode || '',
-          sBankName: userData.SBankName || '',
-        });
-      }
     }
   };
 

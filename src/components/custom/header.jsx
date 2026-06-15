@@ -36,7 +36,6 @@ const getLoginUser = () => {
 const calcPortalStyle = (triggerRef, popupWidth = 320) => {
   if (!triggerRef.current) return { top: 80, right: 8, zIndex: 9999 };
   const rect   = triggerRef.current.getBoundingClientRect();
-  const vw     = window.innerWidth;
   const gap    = 8;
   const margin = 8; // min distance from viewport edge
 
